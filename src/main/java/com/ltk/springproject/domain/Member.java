@@ -5,73 +5,139 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import lombok.Builder; // Builder 패턴을 사용하기 위해 Lombok Builder 어노테이션 추가
-import java.time.LocalDateTime; // DATETIME 타입을 위해 LocalDateTime 임포트
+import lombok.Builder;
+import org.springframework.security.core.GrantedAuthority; // import 추가
+import org.springframework.security.core.authority.SimpleGrantedAuthority; // import 추가
+import org.springframework.security.core.userdetails.UserDetails; // import 추가
 
-@Entity // 이 클래스가 JPA 엔티티임을 나타냅니다.
-@Table(name = "member") // 매핑될 데이터베이스 테이블 이름
-@Getter // 모든 필드의 Getter 메서드를 자동으로 생성합니다.
-@Setter // 모든 필드의 Setter 메서드를 자동으로 생성합니다.
-@NoArgsConstructor // 기본 생성자를 자동으로 생성합니다. (JPA에서 필요)
-@AllArgsConstructor // 모든 필드를 인자로 받는 생성자를 자동으로 생성합니다.
-@Builder // Builder 패턴을 사용하여 객체 생성을 유연하게 합니다.
-public class Member {
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
-    @Id // 기본 키(Primary Key)를 나타냅니다.
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // 기본 키 값이 자동으로 생성되도록 합니다.
-    @Column(name = "id", nullable = false, updatable = false) // '회원 고유 번호'
-    private Long id; // SQL의 INT(10) UNSIGNED는 Java의 Long으로 매핑하는 것이 안전합니다.
+@Entity
+@Table(name = "member")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Member implements UserDetails { // UserDetails 인터페이스 구현
 
-    @Column(name = "regDate", nullable = false, updatable = false) // '회원 가입 날짜'
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", nullable = false, updatable = false)
+    private Long id;
+
+    @Column(name = "regDate", nullable = false, updatable = false)
     private LocalDateTime regDate;
 
-    @Column(name = "updateDate", nullable = false) // '회원 정보 최종 수정 날짜'
+    @Column(name = "updateDate", nullable = false)
     private LocalDateTime updateDate;
 
-    @Column(name = "loginId", nullable = false, unique = true, length = 30) // '로그인 아이디'
+    @Column(name = "loginId", nullable = false, unique = true, length = 30)
     private String loginId;
 
-    @Column(name = "loginPw", nullable = false, length = 100) // '로그인 비밀번호'
+    @Column(name = "loginPw", nullable = false, length = 100)
     private String loginPw;
 
-    @Column(name = "authLevel", nullable = false) // '권한 레벨 (3=일반, 7=관리자)'
-    private Integer authLevel; // SQL의 SMALLINT(2) UNSIGNED는 Java의 Integer로 매핑합니다.
+    @Column(name = "authLevel", nullable = false)
+    private Integer authLevel;
 
-    @Column(name = "name", nullable = false, length = 20) // '회원 이름'
+    @Column(name = "name", nullable = false, length = 20)
     private String name;
 
-    @Column(name = "nickname", nullable = false, unique = true, length = 20) // '회원 닉네임'
+    @Column(name = "nickname", nullable = false, unique = true, length = 20)
     private String nickname;
 
-    @Column(name = "cellphoneNum", nullable = false, length = 20) // '휴대폰 번호'
+    @Column(name = "cellphoneNum", nullable = false, length = 20)
     private String cellphoneNum;
 
-    @Column(name = "email", nullable = false, length = 50) // '이메일 주소'
+    @Column(name = "email", nullable = false, length = 50)
     private String email;
 
-    @Column(name = "delStatus", nullable = false) // '탈퇴 여부 (0=탈퇴 전, 1=탈퇴 후)'
-    private Boolean delStatus; // TINYINT(1)은 Java의 Boolean으로 매핑할 수 있습니다. (0=false, 1=true)
+    @Column(name = "delStatus", nullable = false)
+    private int delStatus;
 
-    @Column(name = "delDate") // '탈퇴 날짜', NULLable 이므로 nullable=true 생략 가능
+    @Column(name = "delDate")
     private LocalDateTime delDate;
 
-    // 엔티티가 영속화되기 전에 호출되어 regDate와 updateDate를 자동으로 설정
     @PrePersist
     protected void onCreate() {
         this.regDate = LocalDateTime.now();
         this.updateDate = LocalDateTime.now();
-        // delStatus는 기본값이 0 (false)이므로 별도 설정 필요 없음
-        if (this.authLevel == null) { // authLevel의 기본값이 3이므로 null일 경우 설정
-            this.authLevel = 3;
-        }
-        if (this.delStatus == null) { // delStatus의 기본값이 0 (false)이므로 null일 경우 설정
-            this.delStatus = false;
-        }
     }
 
-    // 엔티티가 업데이트되기 전에 호출되어 updateDate를 자동으로 설정
     @PreUpdate
     protected void onUpdate() {
         this.updateDate = LocalDateTime.now();
+    }
+
+    // --- UserDetails 인터페이스 구현 메서드 ---
+
+    /**
+     * 계정이 가지고 있는 권한 목록을 리턴합니다. (예: ROLE_USER, ROLE_ADMIN)
+     */
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        // 현재는 모든 사용자에게 "ROLE_USER" 권한을 부여합니다.
+        // authLevel 필드를 사용하여 동적으로 권한을 부여할 수도 있습니다.
+        // 예: if (this.authLevel == 7) authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+        return authorities;
+    }
+
+    /**
+     * 사용자의 비밀번호를 리턴합니다. (loginPw 필드 사용)
+     */
+    @Override
+    public String getPassword() {
+        return this.loginPw;
+    }
+
+    /**
+     * 사용자의 고유 ID를 리턴합니다. (여기서는 loginId를 사용)
+     */
+    @Override
+    public String getUsername() {
+        return this.loginId;
+    }
+
+    /**
+     * 계정 만료 여부를 리턴합니다. (true: 만료 안 됨)
+     * 필요에 따라 만료 로직을 여기에 구현할 수 있습니다.
+     */
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    /**
+     * 계정 잠김 여부를 리턴합니다. (true: 잠기지 않음)
+     * 필요에 따라 잠금 로직을 여기에 구현할 수 있습니다.
+     */
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    /**
+     * 비밀번호 만료 여부를 리턴합니다. (true: 만료 안 됨)
+     * 필요에 따라 비밀번호 만료 로직을 여기에 구현할 수 있습니다.
+     */
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    /**
+     * 계정 활성화 여부를 리턴합니다. (true: 활성화 됨)
+     * 탈퇴 여부(delStatus)를 활용하여 비활성화할 수 있습니다.
+     * 예: return this.delStatus == 0;
+     */
+    @Override
+    public boolean isEnabled() {
+        return this.delStatus == 0; // delStatus가 0일 때만 활성화 (탈퇴하지 않았을 때)
     }
 }
