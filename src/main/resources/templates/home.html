@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메인 홈 - 작품 정보</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            background-color: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 56px;
+            box-sizing: border-box;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        .header .menu-icon-wrapper {
+            position: relative;
+            padding: 8px;
+            margin-right: 8px;
+        }
+        .header .menu-icon {
+            font-size: 24px;
+            color: #555;
+            text-decoration: none;
+            cursor: pointer;
+            display: block;
+        }
+        .header .login-prompt-header a {
+            text-decoration: none;
+            color: #007bff;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .header .user-info-header {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+        .header .user-info-header .profile-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #ddd;
+            margin-right: 8px;
+        }
+        .header .user-info-header .user-name {
+            color: #333;
+            font-weight: 500;
+        }
+        .header .header-search-input {
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            border-radius: 15px;
+            font-size: 14px;
+            width: 150px;
+            transition: width 0.3s ease-in-out;
+        }
+        .header .header-search-input:focus {
+            width: 200px;
+        }
+        .header .search-icon-header {
+            font-size: 22px;
+            color: #555;
+            text-decoration: none;
+            padding: 8px;
+            cursor: pointer;
+        }
+        .header .search-icon-header svg {
+            display: block;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 5px);
+            left: -8px;
+            background-color: #fff;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            z-index: 999;
+            border-radius: 6px;
+            width: max-content;
+            min-width: 150px;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.15s ease-out, transform 0.15s ease-out; /* 속도 약간 빠르게 조정 */
+        }
+        .dropdown-menu.active,
+        .menu-icon-wrapper:hover .dropdown-menu {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .dropdown-menu ul {
+            list-style: none;
+            padding: 5px 0;
+            margin: 0;
+        }
+        .dropdown-menu ul li a {
+            display: block;
+            padding: 10px 20px;
+            text-decoration: none;
+            color: #333;
+            font-size: 15px;
+            white-space: nowrap;
+        }
+        .dropdown-menu ul li a:hover {
+            background-color: #f0f0f0;
+        }
+
+        .main-content { padding: 15px; }
+        /* .search-bar-container 관련 CSS는 삭제 또는 주석 처리 */
+        .content-section { margin-bottom: 25px; background-color: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .content-section h2 { font-size: 18px; margin-top: 0; margin-bottom: 15px; color: #333; }
+        .work-list { display: flex; overflow-x: auto; padding-bottom: 10px; gap: 15px; }
+        .work-list::-webkit-scrollbar { height: 8px; }
+        .work-list::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 4px; }
+        .work-list::-webkit-scrollbar-track { background-color: #f0f0f0; }
+        .work-card { border: 1px solid #e0e0e0; border-radius: 8px; min-width: 140px; max-width: 160px; background-color: #fff; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .work-card a { text-decoration: none; color: inherit; display: block; }
+        .work-card img { width: 100%; height: 200px; object-fit: cover; display: block; }
+        .work-card .work-info { padding: 10px; }
+        .work-card h3 { font-size: 15px; margin: 0 0 5px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .work-card p { font-size: 13px; color: #666; margin: 0; }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <div class="header-left">
+        <div class="menu-icon-wrapper" id="menuIconWrapper">
+            <a href="javascript:void(0);" class="menu-icon" id="menuToggleBtn">☰</a>
+            <nav class="dropdown-menu" id="dropdownMenu">
+                <ul>
+                    <li><a href="#">a</a></li>
+                    <li><a href="#">b</a></li>
+                    <li><a href="#">c (긴 텍스트 예시)</a></li>
+                    <li><a href="#">d</a></li>
+                    <li th:if="${currentUser != null}"><a th:href="@{/member/logout}">로그아웃</a></li>
+                    <li th:unless="${currentUser != null}"><a th:href="@{/member/login}">로그인</a></li>
+                </ul>
+            </nav>
+        </div>
+        <div th:if="${currentUser == null}" class="login-prompt-header">
+            <a th:href="@{/member/login}">로그인해주세요</a>
+        </div>
+    </div>
+    <div class="header-right">
+        <div th:if="${currentUser != null}" class="user-info-header">
+            <div class="profile-icon" th:if="${currentUser.profileImageUrl != null}" th:style="'background-image: url(' + ${currentUser.profileImageUrl} + '); background-size: cover;'"></div>
+            <div class="profile-icon" th:unless="${currentUser.profileImageUrl != null}"></div>
+            <span class="user-name" th:text="${currentUser.nickname} + '님'">홍길동님</span>
+        </div>
+        <input type="text" class="header-search-input" placeholder="검색...">
+        <a href="#" class="search-icon-header" aria-label="검색">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+        </a>
+    </div>
+</header>
+
+<main class="main-content">
+    <section class="content-section" th:if="${currentUser != null and recommendedWorks != null and !recommendedWorks.isEmpty()}">
+        <h2 th:text="${currentUser.nickname} + '님을 위한 맞춤 추천'">OOO님을 위한 맞춤 추천</h2>
+        <div class="work-list" th:unless="${#lists.isEmpty(recommendedWorks)}">
+            <div class="work-card" th:each="work : ${recommendedWorks}">
+                <a th:href="@{'/work/' + ${work.id}}">
+                    <img th:src="${work.thumbnailUrl != null ? work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
+                    <div class="work-info">
+                        <h3 th:text="${work.titleKr}">작품 제목</h3>
+                        <p th:text="${work.type}">작품 타입</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+    <section class="content-section" th:if="${popularWorks != null and !popularWorks.isEmpty()}">
+        <h2>지금 인기있는 작품</h2>
+        <div class="work-list" th:unless="${#lists.isEmpty(popularWorks)}">
+            <div class="work-card" th:each="work : ${popularWorks}">
+                <a th:href="@{'/work/' + ${work.id}}">
+                    <img th:src="${work.thumbnailUrl != null ? work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
+                    <div class="work-info">
+                        <h3 th:text="${work.titleKr}">작품 제목</h3>
+                        <p th:text="${work.type}">작품 타입</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+    <section class="content-section" th:if="${newWorks != null and !newWorks.isEmpty()}">
+        <h2>최신 등록 작품</h2>
+        <div class="work-list" th:unless="${#lists.isEmpty(newWorks)}">
+            <div class="work-card" th:each="work : ${newWorks}">
+                <a th:href="@{'/work/' + ${work.id}}">
+                    <img th:src="${work.thumbnailUrl != null ? work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
+                    <div class="work-info">
+                        <h3 th:text="${work.titleKr}">작품 제목</h3>
+                        <p th:text="${work.type}">작품 타입</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+    <section class="content-section">
+        <h2>다양한 작품 둘러보기</h2>
+        <p>이곳에 장르별 또는 작품 유형별로 탐색할 수 있는 UI를 추가할 수 있습니다.</p>
+    </section>
+</main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const menuIconWrapper = document.getElementById('menuIconWrapper');
+        const menuToggleBtn = document.getElementById('menuToggleBtn');
+        const dropdownMenu = document.getElementById('dropdownMenu');
+
+        let menuHoverTimeout;
+        let isMenuPinned = false;
+
+        if (menuIconWrapper && dropdownMenu && menuToggleBtn) {
+            menuIconWrapper.addEventListener('mouseenter', function () {
+                clearTimeout(menuHoverTimeout);
+                dropdownMenu.classList.add('active');
+            });
+
+            menuIconWrapper.addEventListener('mouseleave', function () {
+                if (!isMenuPinned) {
+                    // 1번 요구사항: 호버 반응성 개선 - 딜레이를 50ms 정도로 줄이거나, 필요시 더 짧게 조정
+                    menuHoverTimeout = setTimeout(function () {
+                        dropdownMenu.classList.remove('active');
+                    }, 50); // 딜레이를 200ms -> 50ms로 변경
+                }
+            });
+
+            menuToggleBtn.addEventListener('click', function (event) {
+                event.stopPropagation();
+                isMenuPinned = !isMenuPinned;
+                if (isMenuPinned) {
+                    dropdownMenu.classList.add('active');
+                } else {
+                    // 클릭으로 닫을 때, 마우스가 래퍼 영역 바깥이면 바로 닫히도록
+                    const isHoveringWrapper = menuIconWrapper.matches(':hover');
+                    if (!isHoveringWrapper) {
+                        dropdownMenu.classList.remove('active');
+                    }
+                    // 만약 마우스가 여전히 래퍼 위에 있다면, 호버 상태에 의해 메뉴가 유지되거나
+                    // mouseleave 로직에 의해 잠시 후 닫힘 (현재는 50ms)
+                }
+            });
+
+            document.addEventListener('click', function (event) {
+                if (isMenuPinned && !menuIconWrapper.contains(event.target)) {
+                    dropdownMenu.classList.remove('active');
+                    isMenuPinned = false;
+                }
+            });
+        }
+    });
+</script>
+
+</body>
+</html>
