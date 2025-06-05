@@ -31,17 +31,16 @@
             display: flex;
             align-items: center;
         }
-        .header .menu-icon-wrapper {
-            position: relative;
-            padding: 8px;
-            margin-right: 8px;
-        }
         .header .menu-icon {
             font-size: 24px;
             color: #555;
             text-decoration: none;
             cursor: pointer;
             display: block;
+            padding: 8px;
+            margin-right: 8px;
+            position: relative;
+            z-index: 1201;
         }
         .header .login-prompt-header a {
             text-decoration: none;
@@ -92,47 +91,83 @@
             display: block;
         }
 
-        .dropdown-menu {
-            display: none;
-            position: absolute;
-            top: calc(100% + 5px);
-            left: -8px;
-            background-color: #fff;
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            z-index: 999;
-            border-radius: 6px;
-            width: max-content;
-            min-width: 150px;
-            opacity: 0;
-            transform: translateY(-10px);
-            transition: opacity 0.15s ease-out, transform 0.15s ease-out; /* 속도 약간 빠르게 조정 */
+        /* 사이드 메뉴 스타일 수정 */
+        .side-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: max-content; /* 1번 요구사항: 가장 긴 텍스트에 맞춰 너비 자동 조절 */
+            min-width: 180px;   /* 최소 너비, 너무 좁아지지 않도록 적절히 조정 */
+            max-width: 80vw;    /* 최대 너비, 화면의 80%를 넘지 않도록 */
+            height: 100vh;
+            background-color: #ffffff;
+            border-right: 1px solid #e0e0e0;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+            z-index: 1200;
+            padding: 20px 0; /* 상하 패딩, 좌우는 각 아이템에서 */
+            box-sizing: border-box;
+            transform: translateX(-105%);
+            transition: transform 0.3s ease-in-out;
+            overflow-y: auto;
+            display: flex; /* 내부 닫기 버튼과 ul 정렬을 위해 flex 사용 */
+            flex-direction: column; /* 위에서 아래로 쌓이도록 */
         }
-        .dropdown-menu.active,
-        .menu-icon-wrapper:hover .dropdown-menu {
-            display: block;
-            opacity: 1;
-            transform: translateY(0);
+        .side-menu.active {
+            transform: translateX(0);
         }
-        .dropdown-menu ul {
+        .side-menu .close-menu-btn { /* 2번 요구사항: 사이드 메뉴 내 닫기 버튼 */
+            font-size: 24px;
+            color: #555;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 10px 15px; /* 클릭 영역 */
+            margin-bottom: 10px; /* 메뉴 아이템과의 간격 */
+            align-self: flex-end; /* 오른쪽 정렬 */
+        }
+        .side-menu .close-menu-btn:hover {
+            color: #000;
+        }
+        .side-menu ul {
             list-style: none;
-            padding: 5px 0;
+            padding: 0;
             margin: 0;
+            width: 100%; /* flex item이므로 너비 100% */
         }
-        .dropdown-menu ul li a {
+        .side-menu ul li a {
             display: block;
-            padding: 10px 20px;
+            padding: 12px 25px; /* 패딩 조정 */
             text-decoration: none;
             color: #333;
-            font-size: 15px;
+            font-size: 16px;
             white-space: nowrap;
+            border-bottom: 1px solid #f0f0f0;
         }
-        .dropdown-menu ul li a:hover {
+        .side-menu ul li:first-child a { /* 첫번째 메뉴 아이템 상단 경계선 */
+            border-top: 1px solid #f0f0f0;
+        }
+        .side-menu ul li:last-child a {
+            border-bottom: none;
+        }
+        .side-menu ul li a:hover {
             background-color: #f0f0f0;
         }
 
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1100;
+        }
+        .overlay.active {
+            display: block;
+        }
+
         .main-content { padding: 15px; }
-        /* .search-bar-container 관련 CSS는 삭제 또는 주석 처리 */
         .content-section { margin-bottom: 25px; background-color: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .content-section h2 { font-size: 18px; margin-top: 0; margin-bottom: 15px; color: #333; }
         .work-list { display: flex; overflow-x: auto; padding-bottom: 10px; gap: 15px; }
@@ -148,22 +183,11 @@
     </style>
 </head>
 <body>
+<div class="overlay" id="pageOverlay"></div>
 
 <header class="header">
     <div class="header-left">
-        <div class="menu-icon-wrapper" id="menuIconWrapper">
-            <a href="javascript:void(0);" class="menu-icon" id="menuToggleBtn">☰</a>
-            <nav class="dropdown-menu" id="dropdownMenu">
-                <ul>
-                    <li><a href="#">a</a></li>
-                    <li><a href="#">b</a></li>
-                    <li><a href="#">c (긴 텍스트 예시)</a></li>
-                    <li><a href="#">d</a></li>
-                    <li th:if="${currentUser != null}"><a th:href="@{/member/logout}">로그아웃</a></li>
-                    <li th:unless="${currentUser != null}"><a th:href="@{/member/login}">로그인</a></li>
-                </ul>
-            </nav>
-        </div>
+        <a href="javascript:void(0);" class="menu-icon" id="menuToggleBtn">☰</a>
         <div th:if="${currentUser == null}" class="login-prompt-header">
             <a th:href="@{/member/login}">로그인해주세요</a>
         </div>
@@ -184,6 +208,18 @@
         </a>
     </div>
 </header>
+
+<nav class="side-menu" id="sideMenu">
+    <button type="button" class="close-menu-btn" id="closeSideMenuBtn" aria-label="메뉴 닫기">✕</button>
+    <ul>
+        <li><a href="#">a</a></li>
+        <li><a href="#">b</a></li>
+        <li><a href="#">c (가장 긴 텍스트를 가진 메뉴 항목 예시)</a></li>
+        <li><a href="#">d</a></li>
+        <li th:if="${currentUser != null}"><a th:href="@{/member/logout}">로그아웃</a></li>
+        <li th:unless="${currentUser != null}"><a th:href="@{/member/login}">로그인</a></li>
+    </ul>
+</nav>
 
 <main class="main-content">
     <section class="content-section" th:if="${currentUser != null and recommendedWorks != null and !recommendedWorks.isEmpty()}">
@@ -236,48 +272,46 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const menuIconWrapper = document.getElementById('menuIconWrapper');
-        const menuToggleBtn = document.getElementById('menuToggleBtn');
-        const dropdownMenu = document.getElementById('dropdownMenu');
+        const menuToggleBtn = document.getElementById('menuToggleBtn'); // 헤더의 햄버거 아이콘
+        const sideMenu = document.getElementById('sideMenu');
+        const closeSideMenuBtn = document.getElementById('closeSideMenuBtn'); // 사이드 메뉴 안의 닫기 버튼
+        const pageOverlay = document.getElementById('pageOverlay');
 
-        let menuHoverTimeout;
-        let isMenuPinned = false;
+        function openMenu() {
+            sideMenu.classList.add('active');
+            pageOverlay.classList.add('active');
+        }
 
-        if (menuIconWrapper && dropdownMenu && menuToggleBtn) {
-            menuIconWrapper.addEventListener('mouseenter', function () {
-                clearTimeout(menuHoverTimeout);
-                dropdownMenu.classList.add('active');
-            });
+        function closeMenu() {
+            sideMenu.classList.remove('active');
+            pageOverlay.classList.remove('active');
+        }
 
-            menuIconWrapper.addEventListener('mouseleave', function () {
-                if (!isMenuPinned) {
-                    // 1번 요구사항: 호버 반응성 개선 - 딜레이를 50ms 정도로 줄이거나, 필요시 더 짧게 조정
-                    menuHoverTimeout = setTimeout(function () {
-                        dropdownMenu.classList.remove('active');
-                    }, 50); // 딜레이를 200ms -> 50ms로 변경
-                }
-            });
-
+        if (menuToggleBtn && sideMenu && pageOverlay && closeSideMenuBtn) {
+            // 헤더의 햄버거 아이콘 클릭 시 메뉴 토글
             menuToggleBtn.addEventListener('click', function (event) {
                 event.stopPropagation();
-                isMenuPinned = !isMenuPinned;
-                if (isMenuPinned) {
-                    dropdownMenu.classList.add('active');
+                if (sideMenu.classList.contains('active')) {
+                    closeMenu();
                 } else {
-                    // 클릭으로 닫을 때, 마우스가 래퍼 영역 바깥이면 바로 닫히도록
-                    const isHoveringWrapper = menuIconWrapper.matches(':hover');
-                    if (!isHoveringWrapper) {
-                        dropdownMenu.classList.remove('active');
-                    }
-                    // 만약 마우스가 여전히 래퍼 위에 있다면, 호버 상태에 의해 메뉴가 유지되거나
-                    // mouseleave 로직에 의해 잠시 후 닫힘 (현재는 50ms)
+                    openMenu();
                 }
             });
 
-            document.addEventListener('click', function (event) {
-                if (isMenuPinned && !menuIconWrapper.contains(event.target)) {
-                    dropdownMenu.classList.remove('active');
-                    isMenuPinned = false;
+            // 사이드 메뉴 안의 닫기 버튼 클릭 시 메뉴 닫힘
+            closeSideMenuBtn.addEventListener('click', function () {
+                closeMenu();
+            });
+
+            // 오버레이 클릭 시 메뉴 닫힘
+            pageOverlay.addEventListener('click', function () {
+                closeMenu();
+            });
+
+            // ESC 키로 메뉴 닫기
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape' && sideMenu.classList.contains('active')) {
+                    closeMenu();
                 }
             });
         }
