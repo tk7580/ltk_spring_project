@@ -77,3 +77,7 @@ out/
 ### Custom Exclusions ###
 # 모든 .properties 파일 제외 (데이터베이스 비밀번호 등 민감 정보)
 *.properties
+
+# Python API Collector Files
+/python_api_collector/.env
+/python_api_collector/__pycache__/
