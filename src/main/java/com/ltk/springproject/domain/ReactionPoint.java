@@ -20,7 +20,7 @@ public class ReactionPoint {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false, updatable = false)
-    private Integer id; // INT(10) UNSIGNED
+    private Long id; // Integer -> Long으로 변경
 
     @Column(name = "regDate", nullable = false, updatable = false)
     private LocalDateTime regDate;
@@ -33,16 +33,16 @@ public class ReactionPoint {
     private Member member;
 
     @Column(name = "relTypeCode", nullable = false, length = 50)
-    private String relTypeCode; // 예: "article", "reply"
+    private String relTypeCode;
 
     @Column(name = "relId", nullable = false)
-    private Integer relId; // 관련 데이터의 ID (articleId 또는 replyId 등)
+    private Long relId; // Integer -> Long으로 변경 (Article, Reply의 ID가 Long이 되므로)
 
     @Column(name = "reactionType", nullable = false, length = 10)
-    private String reactionType; // 예: "GOOD", "BAD"
+    private String reactionType;
 
     @Column(name = "point", nullable = false)
-    private Integer point; // 예: 1 (GOOD), -1 (BAD)
+    private Integer point;
 
     @PrePersist
     protected void onCreate() {

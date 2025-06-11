@@ -1,11 +1,7 @@
 package com.ltk.springproject.domain;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import lombok.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,47 +17,41 @@ public class Article {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false, updatable = false)
-    private Integer id; // INT(10) UNSIGNED
+    private Long id;
 
-    @Column(name = "regDate", nullable = false, updatable = false)
+    @Column(name = "regDate")
     private LocalDateTime regDate;
 
-    @Column(name = "updateDate", nullable = false)
+    @Column(name = "updateDate")
     private LocalDateTime updateDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "memberId", nullable = false)
+    @JoinColumn(name = "memberId")
     private Member member;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "seriesId", nullable = false)
+    @JoinColumn(name = "seriesId")
     private Series series;
 
-    @Column(name = "title", nullable = false, length = 255)
+    @Column(name = "title")
     private String title;
 
     @Lob
-    @Column(name = "body", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "body")
     private String body;
 
-    @Column(name = "hitCount", nullable = false)
-    private Integer hitCount; // INT(10) UNSIGNED, DB DEFAULT 0
+    @Column(name = "hitCount")
+    private Integer hitCount;
 
-    @Column(name = "goodReactionPoint", nullable = false)
-    private Integer goodReactionPoint; // INT(10) UNSIGNED, DB DEFAULT 0
+    @Column(name = "goodReactionPoint")
+    private Integer goodReactionPoint;
 
-    @Column(name = "badReactionPoint", nullable = false)
-    private Integer badReactionPoint; // INT(10) UNSIGNED, DB DEFAULT 0
+    @Column(name = "badReactionPoint")
+    private Integer badReactionPoint;
 
-    // Article과 Reply 간의 관계 (1:N)
-    @OneToMany(mappedBy = "article", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "article", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Reply> replies = new ArrayList<>();
-
-    // Article과 ReactionPoint 간의 관계 (1:N) - 만약 ReactionPoint가 Article에만 달린다면.
-    // relTypeCode로 구분하므로, 여기서는 직접적인 @OneToMany를 걸기보다 ReactionPoint 쪽에서 Article을 참조.
-    // 필요하다면 서비스 계층에서 관련 반응을 조회하는 로직 구현.
 
     @PrePersist
     protected void onCreate() {
@@ -75,13 +65,5 @@ public class Article {
     @PreUpdate
     protected void onUpdate() {
         this.updateDate = LocalDateTime.now();
-    }
-
-    // 양방향 연관관계 편의 메소드 (Reply)
-    public void addReply(Reply reply) {
-        this.replies.add(reply);
-        if (reply.getArticle() != this) {
-            reply.setArticle(this);
-        }
     }
 }

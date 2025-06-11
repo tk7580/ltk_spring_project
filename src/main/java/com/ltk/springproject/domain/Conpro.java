@@ -19,7 +19,7 @@ public class Conpro {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false, updatable = false)
-    private Integer id; // INT(10) UNSIGNED
+    private Long id; // Integer -> Long으로 변경
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workId", nullable = false)
@@ -40,6 +40,4 @@ public class Conpro {
     @Lob
     @Column(name = "additionalInfo", columnDefinition = "TEXT")
     private String additionalInfo;
-
-    // Conpro는 보통 regDate, updateDate가 필요 없을 수 있으나, 필요하다면 추가 가능
 }

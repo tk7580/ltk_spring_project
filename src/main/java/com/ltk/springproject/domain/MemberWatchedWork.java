@@ -1,16 +1,20 @@
 package com.ltk.springproject.domain;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "memberWatchedWork")
+@Table(
+        name = "memberWatchedWork",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "UK_memberWatchedWork_memberId_workId",
+                        columnNames = {"memberId", "workId"}
+                )
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,7 +25,7 @@ public class MemberWatchedWork {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false, updatable = false)
-    private Long id; // BIGINT
+    private Long id;
 
     @Column(name = "regDate", nullable = false, updatable = false)
     private LocalDateTime regDate;
@@ -38,7 +42,7 @@ public class MemberWatchedWork {
     private Work work;
 
     @Column(name = "watchedDate") // NULL 허용
-    private LocalDate watchedDate; // DATE 타입
+    private LocalDate watchedDate;
 
     @PrePersist
     protected void onCreate() {

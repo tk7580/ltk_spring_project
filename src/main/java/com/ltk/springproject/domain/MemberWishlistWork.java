@@ -1,15 +1,19 @@
 package com.ltk.springproject.domain;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "memberWishlistWork")
+@Table(
+        name = "memberWishlistWork",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "UK_memberWishlistWork_memberId_workId",
+                        columnNames = {"memberId", "workId"}
+                )
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,7 +24,7 @@ public class MemberWishlistWork {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false, updatable = false)
-    private Long id; // BIGINT
+    private Long id;
 
     @Column(name = "regDate", nullable = false, updatable = false)
     private LocalDateTime regDate;

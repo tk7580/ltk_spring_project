@@ -22,7 +22,7 @@ public class Reply {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false, updatable = false)
-    private Integer id; // INT(10) UNSIGNED
+    private Long id; // Integer -> Long으로 변경
 
     @Column(name = "regDate", nullable = false, updatable = false)
     private LocalDateTime regDate;
@@ -35,29 +35,29 @@ public class Reply {
     private Member member;
 
     @Column(name = "relTypeCode", nullable = false, length = 50)
-    private String relTypeCode; // 이 경우 항상 "article"
+    private String relTypeCode;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "relId", nullable = false) // article.id 참조
+    @JoinColumn(name = "relId", nullable = false)
     private Article article;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parentId") // 자기 자신을 참조 (부모 댓글 ID)
+    @JoinColumn(name = "parentId")
     private Reply parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
-    private List<Reply> children = new ArrayList<>(); // 자식 댓글들
+    private List<Reply> children = new ArrayList<>();
 
     @Lob
     @Column(name = "body", nullable = false, columnDefinition = "TEXT")
     private String body;
 
     @Column(name = "goodReactionPoint", nullable = false)
-    private Integer goodReactionPoint; // INT(10) UNSIGNED, DB DEFAULT 0
+    private Integer goodReactionPoint;
 
     @Column(name = "badReactionPoint", nullable = false)
-    private Integer badReactionPoint; // INT(10) UNSIGNED, DB DEFAULT 0
+    private Integer badReactionPoint;
 
     @PrePersist
     protected void onCreate() {
@@ -65,7 +65,7 @@ public class Reply {
         this.updateDate = LocalDateTime.now();
         this.goodReactionPoint = 0;
         this.badReactionPoint = 0;
-        if (this.relTypeCode == null) { // 기본값 설정
+        if (this.relTypeCode == null) {
             this.relTypeCode = "article";
         }
     }
@@ -75,7 +75,6 @@ public class Reply {
         this.updateDate = LocalDateTime.now();
     }
 
-    // 양방향 연관관계 편의 메소드 (자식 댓글)
     public void addChildReply(Reply child) {
         this.children.add(child);
         if (child.getParent() != this) {

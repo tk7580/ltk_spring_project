@@ -1,16 +1,20 @@
 package com.ltk.springproject.domain;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "memberWorkRating")
+@Table(
+        name = "memberWorkRating",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "UK_memberWorkRating_memberId_workId",
+                        columnNames = {"memberId", "workId"}
+                )
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,7 +25,7 @@ public class MemberWorkRating {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false, updatable = false)
-    private Long id; // BIGINT
+    private Long id;
 
     @Column(name = "regDate", nullable = false, updatable = false)
     private LocalDateTime regDate;
@@ -38,10 +42,10 @@ public class MemberWorkRating {
     private Work work;
 
     @Column(name = "score", nullable = false, precision = 3, scale = 1)
-    private BigDecimal score; // DECIMAL(3,1) 타입은 BigDecimal로 매핑하는 것이 정확합니다.
+    private BigDecimal score; // DECIMAL(3,1)은 BigDecimal로 매핑
 
     @Lob
-    @Column(name = "comment", columnDefinition = "TEXT") // NULL 허용
+    @Column(name = "comment", columnDefinition = "TEXT")
     private String comment;
 
     @PrePersist
