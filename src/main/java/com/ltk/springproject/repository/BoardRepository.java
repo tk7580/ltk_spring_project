@@ -4,7 +4,7 @@ import com.ltk.springproject.domain.Board;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
-public interface BoardRepository extends JpaRepository<Board, Integer> {
+public interface BoardRepository extends JpaRepository<Board, Long> { // Long으로 변경
     // 게시판 코드로 게시판 찾기
     Optional<Board> findByCode(String code);
 

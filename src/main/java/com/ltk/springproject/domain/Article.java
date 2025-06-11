@@ -19,18 +19,18 @@ public class Article {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "regDate")
+    @Column(name = "reg_date") // regDate -> reg_date
     private LocalDateTime regDate;
 
-    @Column(name = "updateDate")
+    @Column(name = "update_date") // updateDate -> update_date
     private LocalDateTime updateDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "memberId")
+    @JoinColumn(name = "member_id") // memberId -> member_id
     private Member member;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "seriesId")
+    @JoinColumn(name = "series_id") // seriesId -> series_id
     private Series series;
 
     @Column(name = "title")
@@ -40,13 +40,13 @@ public class Article {
     @Column(name = "body")
     private String body;
 
-    @Column(name = "hitCount")
+    @Column(name = "hit_count") // hitCount -> hit_count
     private Integer hitCount;
 
-    @Column(name = "goodReactionPoint")
+    @Column(name = "good_reaction_point") // goodReactionPoint -> good_reaction_point
     private Integer goodReactionPoint;
 
-    @Column(name = "badReactionPoint")
+    @Column(name = "bad_reaction_point") // badReactionPoint -> bad_reaction_point
     private Integer badReactionPoint;
 
     @OneToMany(mappedBy = "article", cascade = CascadeType.ALL, orphanRemoval = true)

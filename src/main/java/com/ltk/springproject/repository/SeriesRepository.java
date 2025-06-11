@@ -4,7 +4,7 @@ import com.ltk.springproject.domain.Series;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional; // 필요에 따라 추가
 
-public interface SeriesRepository extends JpaRepository<Series, Integer> {
+public interface SeriesRepository extends JpaRepository<Series, Long> { // Long으로 변경
     // 예시: 시리즈 한글 제목으로 검색 (부분 일치)
     // List<Series> findByTitleKrContaining(String keyword);
 
