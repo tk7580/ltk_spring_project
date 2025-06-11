@@ -14,13 +14,20 @@ import java.util.List;
 @RequiredArgsConstructor
 public class HomeController {
 
-    // 이전에 추가했던 WorkService 주입 부분은 그대로 둡니다.
     private final WorkService workService;
     // TODO: 사용자 정보를 가져오기 위해 MemberService도 주입받아야 합니다.
     // private final MemberService memberService;
 
-    // --- 여기를 수정합니다 ---
-    @GetMapping("/home") // "/" 에서 "/home"으로 변경
+    // --- 이 메소드를 추가합니다 ---
+    /**
+     * 루트 URL("/") 접속 시 "/home"으로 리다이렉트합니다.
+     */
+    @GetMapping("/")
+    public String redirectToHome() {
+        return "redirect:/home";
+    }
+
+    @GetMapping("/home")
     public String home(Model model, Principal principal) {
         if (principal != null) {
             // ... (로그인 사용자 정보 처리 로직은 그대로)
@@ -29,6 +36,6 @@ public class HomeController {
         List<Work> workList = workService.findAllWorks();
         model.addAttribute("popularWorks", workList);
 
-        return "home"; // "home.html" 템플릿을 사용하는 것은 그대로 유지
+        return "home";
     }
 }

@@ -46,8 +46,9 @@ public class Work {
     @Column(name = "timelineSequence")
     private Integer timelineSequence;
 
+    // --- 여기를 수정합니다 ---
     @Column(name = "isCompleted")
-    private boolean isCompleted;
+    private Boolean isCompleted; // private boolean -> private Boolean
 
     @Lob
     @Column(name = "description")

@@ -1,26 +1,29 @@
 -- 데이터베이스가 존재하면 삭제 (모든 데이터 파괴)
-DROP DATABASE IF EXISTS `ltk-spring-project`;
+DROP
+DATABASE IF EXISTS `ltk-spring-project`;
 
 -- 데이터베이스 생성
-CREATE DATABASE `ltk-spring-project`;
+CREATE
+DATABASE `ltk-spring-project`;
 
 -- 생성한 데이터베이스 사용
-USE `ltk-spring-project`;
+USE
+`ltk-spring-project`;
 
 -- 테이블 생성 (BIGINT로 ID 타입 통일 및 모든 컬럼 포함)
 
 CREATE TABLE `member`
 (
-    `id`           BIGINT              NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `regDate`      DATETIME            NOT NULL,
-    `updateDate`   DATETIME            NOT NULL,
-    `loginId`      CHAR(30)            NOT NULL UNIQUE,
-    `loginPw`      CHAR(100)           NOT NULL,
+    `id`           BIGINT    NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`      DATETIME  NOT NULL,
+    `updateDate`   DATETIME  NOT NULL,
+    `loginId`      CHAR(30)  NOT NULL UNIQUE,
+    `loginPw`      CHAR(100) NOT NULL,
     `authLevel`    SMALLINT(2) UNSIGNED         DEFAULT 3,
-    `name`         CHAR(20)            NOT NULL,
-    `nickname`     CHAR(20)            NOT NULL UNIQUE,
-    `cellphoneNum` CHAR(20)            NOT NULL,
-    `email`        CHAR(50)            NOT NULL,
+    `name`         CHAR(20)  NOT NULL,
+    `nickname`     CHAR(20)  NOT NULL UNIQUE,
+    `cellphoneNum` CHAR(20)  NOT NULL,
+    `email`        CHAR(50)  NOT NULL,
     `gender`       CHAR(1),
     `birthDate`    DATE,
     `age`          SMALLINT(3) UNSIGNED,
@@ -43,11 +46,11 @@ CREATE TABLE `series`
 
 CREATE TABLE `board`
 (
-    `id`         BIGINT              NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `regDate`    DATETIME            NOT NULL,
-    `updateDate` DATETIME            NOT NULL,
-    `code`       CHAR(50)            NOT NULL UNIQUE,
-    `name`       CHAR(20)            NOT NULL UNIQUE,
+    `id`         BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`    DATETIME NOT NULL,
+    `updateDate` DATETIME NOT NULL,
+    `code`       CHAR(50) NOT NULL UNIQUE,
+    `name`       CHAR(20) NOT NULL UNIQUE,
     `delStatus`  TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
     `delDate`    DATETIME
 );
@@ -101,14 +104,14 @@ CREATE TABLE `reactionPoint`
 
 CREATE TABLE `reply`
 (
-    `id`                BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `regDate`           DATETIME     NOT NULL,
-    `updateDate`        DATETIME     NOT NULL,
-    `memberId`          BIGINT       NOT NULL,
-    `relTypeCode`       CHAR(50)     NOT NULL,
-    `relId`             BIGINT       NOT NULL,
+    `id`                BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`           DATETIME NOT NULL,
+    `updateDate`        DATETIME NOT NULL,
+    `memberId`          BIGINT   NOT NULL,
+    `relTypeCode`       CHAR(50) NOT NULL,
+    `relId`             BIGINT   NOT NULL,
     `parentId`          BIGINT,
-    `body`              TEXT         NOT NULL,
+    `body`              TEXT     NOT NULL,
     `goodReactionPoint` INT UNSIGNED NOT NULL DEFAULT 0,
     `badReactionPoint`  INT UNSIGNED NOT NULL DEFAULT 0,
     FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
@@ -146,7 +149,7 @@ CREATE TABLE `memberWatchedWork`
     `updateDate`  DATETIME NOT NULL,
     `memberId`    BIGINT   NOT NULL,
     `workId`      BIGINT   NOT NULL,
-    `watchedDate` DATE     NULL,
+    `watchedDate` DATE NULL,
     FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     UNIQUE KEY (`memberId`, `workId`)
@@ -160,7 +163,7 @@ CREATE TABLE `memberWorkRating`
     `memberId`   BIGINT        NOT NULL,
     `workId`     BIGINT        NOT NULL,
     `score`      DECIMAL(3, 1) NOT NULL,
-    `comment`    TEXT          NULL,
+    `comment`    TEXT NULL,
     FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     UNIQUE KEY (`memberId`, `workId`)

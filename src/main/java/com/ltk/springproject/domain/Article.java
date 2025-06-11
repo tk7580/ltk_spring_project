@@ -19,18 +19,18 @@ public class Article {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "reg_date") // regDate -> reg_date
+    @Column(name = "regDate") // "reg_date" -> "regDate"
     private LocalDateTime regDate;
 
-    @Column(name = "update_date") // updateDate -> update_date
+    @Column(name = "updateDate") // "update_date" -> "updateDate"
     private LocalDateTime updateDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id") // memberId -> member_id
+    @JoinColumn(name = "memberId") // "member_id" -> "memberId"
     private Member member;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "series_id") // seriesId -> series_id
+    @JoinColumn(name = "seriesId") // "series_id" -> "seriesId"
     private Series series;
 
     @Column(name = "title")
@@ -40,13 +40,13 @@ public class Article {
     @Column(name = "body")
     private String body;
 
-    @Column(name = "hit_count") // hitCount -> hit_count
+    @Column(name = "hitCount") // "hit_count" -> "hitCount"
     private Integer hitCount;
 
-    @Column(name = "good_reaction_point") // goodReactionPoint -> good_reaction_point
+    @Column(name = "goodReactionPoint") // "good_reaction_point" -> "goodReactionPoint"
     private Integer goodReactionPoint;
 
-    @Column(name = "bad_reaction_point") // badReactionPoint -> bad_reaction_point
+    @Column(name = "badReactionPoint") // "bad_reaction_point" -> "badReactionPoint"
     private Integer badReactionPoint;
 
     @OneToMany(mappedBy = "article", cascade = CascadeType.ALL, orphanRemoval = true)
