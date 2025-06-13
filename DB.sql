@@ -10,7 +10,7 @@ DATABASE `ltk-spring-project`;
 USE
 `ltk-spring-project`;
 
--- 테이블 생성 (BIGINT로 ID 타입 통일 및 모든 컬럼 포함)
+-- 테이블 생성
 
 CREATE TABLE `member`
 (
@@ -19,7 +19,7 @@ CREATE TABLE `member`
     `updateDate`   DATETIME  NOT NULL,
     `loginId`      CHAR(30)  NOT NULL UNIQUE,
     `loginPw`      CHAR(100) NOT NULL,
-    `authLevel`    SMALLINT(2) UNSIGNED         DEFAULT 3,
+    `authLevel`    SMALLINT(2) UNSIGNED DEFAULT 3,
     `name`         CHAR(20)  NOT NULL,
     `nickname`     CHAR(20)  NOT NULL UNIQUE,
     `cellphoneNum` CHAR(20)  NOT NULL,
@@ -167,4 +167,15 @@ CREATE TABLE `memberWorkRating`
     FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     UNIQUE KEY (`memberId`, `workId`)
+);
+
+CREATE TABLE `memberWishlistSeries`
+(
+    `id`       BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`  DATETIME NOT NULL,
+    `memberId` BIGINT   NOT NULL,
+    `seriesId` BIGINT   NOT NULL,
+    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`seriesId`) REFERENCES `series` (`id`) ON DELETE CASCADE,
+    UNIQUE KEY (`memberId`, `seriesId`)
 );

@@ -2,6 +2,8 @@ package com.ltk.springproject.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -17,14 +19,22 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    // ===== 자동 로그인을 위해 이 Bean을 추가합니다 =====
+    @Bean
+    AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
+    }
+    // ===============================================
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(
-                                "/", // 루트 경로도 허용
+                                "/",
                                 "/home",
+                                "/exam/**",
                                 "/member/joinForm",
                                 "/member/doJoin",
                                 "/member/login",
@@ -35,7 +45,6 @@ public class SecurityConfig {
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-                // --- 이 부분을 추가하여 콘텐츠 보안 정책(CSP)을 설정합니다 ---
                 .headers(headers -> headers
                         .addHeaderWriter(new ContentSecurityPolicyHeaderWriter(
                                 "default-src 'self';" +
@@ -46,15 +55,14 @@ public class SecurityConfig {
                                         " object-src 'none';"
                         ))
                 )
-                // --------------------------------------------------------
                 .formLogin(formLogin -> formLogin
                         .loginPage("/member/login")
                         .defaultSuccessUrl("/home", true)
                         .permitAll()
                 )
                 .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessUrl("/member/login?logout")
+                        .logoutUrl("/member/logout")
+                        .logoutSuccessUrl("/")
                         .permitAll()
                 );
         return http.build();

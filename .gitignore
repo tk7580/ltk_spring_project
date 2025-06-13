@@ -81,3 +81,7 @@ out/
 # Python API Collector Files
 /python_api_collector/.env
 /python_api_collector/__pycache__/
+
+# 학습용/임시 코드 제외
+/src/main/java/com/ltk/springproject/exam/
+/src/main/resources/templates/exam/
