@@ -31,9 +31,11 @@ public class Series {
     @Column(name = "titleOriginal")
     private String titleOriginal;
 
+    // ===== 이 부분을 수정합니다 =====
     @Lob
-    @Column(name = "description")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
+    // ============================
 
     @Column(name = "thumbnailUrl")
     private String thumbnailUrl;

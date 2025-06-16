@@ -27,18 +27,17 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
-	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf' // JSP 관련 대신 이 줄 추가!
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+	implementation 'nz.net.ultraq.thymeleaf:thymeleaf-layout-dialect' // 레이아웃 기능 의존성
+	implementation 'org.springframework.boot:spring-boot-starter-validation' // 유효성 검사 추가
+
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-	// 개발 편의를 위한 DevTools (배포 시에는 포함되지 않음)
+
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
-	// 다음 JSP 관련 의존성 3줄은 제거하거나 주석 처리해주세요.
-	// implementation 'org.apache.tomcat.embed:tomcat-embed-jasper'
-	// implementation 'jakarta.servlet.jsp.jstl:jakarta.servlet.jsp.jstl-api'
-	// runtimeOnly 'org.glassfish.web:jakarta.servlet.jsp.jstl'
 }
 
 tasks.named('test') {
