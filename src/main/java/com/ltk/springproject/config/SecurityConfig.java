@@ -19,12 +19,10 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // ===== 자동 로그인을 위해 이 Bean을 추가합니다 =====
     @Bean
     AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
-    // ===============================================
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -41,7 +39,12 @@ public class SecurityConfig {
                                 "/css/**",
                                 "/js/**",
                                 "/images/**",
-                                "/favicon.ico"
+                                /* ===== 파비콘 파일 경로 허용 추가 ===== */
+                                "/favicon.ico",
+                                "/apple-touch-icon.png",
+                                "/favicon-32x32.png",
+                                "/favicon-16x16.png"
+                                /* ================================== */
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

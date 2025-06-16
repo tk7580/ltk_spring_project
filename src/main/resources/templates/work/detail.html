@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title th:text="${work.titleKr} + ' - LoreLoom'">작품 상세 정보</title>
+
+  <link rel="apple-touch-icon" sizes="180x180" th:href="@{/apple-touch-icon.png}">
+  <link rel="icon" type="image/png" sizes="32x32" th:href="@{/favicon-32x32.png}">
+  <link rel="icon" type="image/png" sizes="16x16" th:href="@{/favicon-16x16.png}">
+
+  <style>
+    /* home.html의 스타일과 거의 동일합니다. */
+    html {
+      background-color: #e9e9eb;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #333;
+      min-height: 100vh;
+    }
+    .main-content { padding: 15px; }
+    .content-section { margin-bottom: 25px; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+    /* ===== 상세 페이지를 위한 스타일 추가 ===== */
+    .detail-container {
+      display: flex;
+      gap: 30px; /* 이미지와 정보 사이의 간격 */
+      flex-wrap: wrap; /* 화면이 좁아지면 줄바꿈 */
+    }
+    .detail-poster {
+      flex-shrink: 0; /* 찌그러지지 않도록 */
+    }
+    .detail-poster img {
+      width: 300px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .detail-info {
+      flex-grow: 1;
+    }
+    .detail-info h1 {
+      margin-top: 0;
+      font-size: 28px;
+    }
+    .detail-info .title-original {
+      font-size: 16px;
+      color: #888;
+      margin-top: -15px;
+      margin-bottom: 20px;
+    }
+    .detail-info .meta-info {
+      list-style: none;
+      padding: 0;
+      margin: 20px 0;
+    }
+    .detail-info .meta-info li {
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+    .detail-info .meta-info strong {
+      display: inline-block;
+      width: 80px; /* 레이블 너비 고정 */
+      color: #555;
+    }
+    .detail-info .description {
+      font-size: 16px;
+      line-height: 1.7;
+      color: #444;
+      margin-top: 25px;
+    }
+    /* 액션 버튼들을 위한 영역 (나중에 추가) */
+    .action-buttons {
+      margin-top: 30px;
+      display: flex;
+      gap: 15px;
+    }
+    .action-buttons .btn {
+      padding: 10px 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      text-decoration: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn-wishlist {
+      background-color: #ffc107;
+      color: #fff;
+      border-color: #ffc107;
+    }
+    .btn-rate {
+      background-color: #007bff;
+      color: #fff;
+      border-color: #007bff;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <a th:href="@{/home}" style="margin: 20px; display:inline-block;"> &lt; 홈으로 돌아가기</a>
+</header>
+
+<main class="main-content">
+  <section class="content-section">
+    <div class="detail-container">
+      <div class="detail-poster">
+        <img th:src="${work.thumbnailUrl != null ? work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 포스터"/>
+      </div>
+
+      <div class="detail-info">
+        <h1 th:text="${work.titleKr}">작품 제목</h1>
+        <p class="title-original" th:text="${work.titleOriginal}">Original Title</p>
+        <hr>
+        <ul class="meta-info">
+          <li><strong>타입</strong> <span th:text="${work.type}"></span></li>
+          <li><strong>출시일</strong> <span th:text="${work.releaseDate}"></span></li>
+          <li><strong>완결여부</strong> <span th:text="${work.isCompleted ? '완결' : '연재 중'}"></span></li>
+        </ul>
+        <hr>
+        <div class="action-buttons">
+          <a href="#" class="btn btn-wishlist">찜하기</a>
+          <a href="#" class="btn btn-rate">평점 매기기</a>
+        </div>
+        <p class="description" th:text="${work.description}">
+          작품에 대한 상세 설명이 여기에 들어갑니다.
+        </p>
+      </div>
+    </div>
+  </section>
+</main>
+</body>
+</html>
