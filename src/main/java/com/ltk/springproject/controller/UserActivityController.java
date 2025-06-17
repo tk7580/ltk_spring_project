@@ -15,7 +15,7 @@ import java.security.Principal;
 
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/member/activity") // 사용자 활동 관련 URL을 명확히 분리
+@RequestMapping("/member/activity")
 public class UserActivityController {
 
     private final UserActivityService userActivityService;
@@ -32,18 +32,18 @@ public class UserActivityController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/work/{workId}/wishlist")
     @ResponseBody
-    public ResponseEntity<Void> addWishlist(@PathVariable Long workId, Principal principal) {
+    public ResponseEntity<String> addWishlist(@PathVariable Long workId, Principal principal) {
         Member currentUser = getCurrentUser(principal);
         userActivityService.addWorkToWishlist(currentUser.getId(), workId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok("찜하기가 완료되었습니다.");
     }
 
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/work/{workId}/wishlist")
     @ResponseBody
-    public ResponseEntity<Void> removeWishlist(@PathVariable Long workId, Principal principal) {
+    public ResponseEntity<String> removeWishlist(@PathVariable Long workId, Principal principal) {
         Member currentUser = getCurrentUser(principal);
         userActivityService.removeWorkFromWishlist(currentUser.getId(), workId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok("찜하기가 취소되었습니다.");
     }
 }
