@@ -21,7 +21,6 @@ public class UserActivityController {
     private final UserActivityService userActivityService;
     private final MemberRepository memberRepository;
 
-    // 로그인한 사용자의 Member 객체를 가져오는 헬퍼 메소드
     private Member getCurrentUser(Principal principal) {
         if (principal == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.");
@@ -30,12 +29,6 @@ public class UserActivityController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자 정보를 찾을 수 없습니다."));
     }
 
-    /**
-     * 특정 작품을 찜 목록에 추가하는 API
-     * @param workId 찜할 작품의 ID
-     * @param principal 현재 로그인한 사용자 정보
-     * @return 성공 시 200 OK
-     */
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/work/{workId}/wishlist")
     @ResponseBody
@@ -45,12 +38,6 @@ public class UserActivityController {
         return ResponseEntity.ok().build();
     }
 
-    /**
-     * 특정 작품을 찜 목록에서 제거하는 API
-     * @param workId 찜 취소할 작품의 ID
-     * @param principal 현재 로그인한 사용자 정보
-     * @return 성공 시 200 OK
-     */
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/work/{workId}/wishlist")
     @ResponseBody
