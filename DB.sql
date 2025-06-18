@@ -179,3 +179,15 @@ CREATE TABLE `memberWishlistSeries`
     FOREIGN KEY (`seriesId`) REFERENCES `series` (`id`) ON DELETE CASCADE,
     UNIQUE KEY (`memberId`, `seriesId`)
 );
+
+CREATE TABLE `work_identifier`
+(
+    `id`         BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`    DATETIME     NOT NULL,
+    `updateDate` DATETIME     NOT NULL,
+    `workId`     BIGINT       NOT NULL,
+    `sourceName` VARCHAR(50)  NOT NULL,
+    `sourceId`   VARCHAR(255) NOT NULL,
+    FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
+    UNIQUE KEY `UK_source` (`sourceName`, `sourceId`)
+);

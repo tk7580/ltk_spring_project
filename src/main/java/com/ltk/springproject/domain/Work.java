@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "work")
@@ -17,6 +19,8 @@ public class Work {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    // tmdbId 필드 삭제
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seriesId")
@@ -47,16 +51,20 @@ public class Work {
     private Integer timelineSequence;
 
     @Column(name = "isCompleted")
-    private Boolean isCompleted; // 이전에 Boolean으로 수정한 것 유지
+    private Boolean isCompleted;
 
-    // ===== 이 부분을 수정합니다 =====
     @Lob
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
-    // ============================
 
     @Column(name = "thumbnailUrl")
     private String thumbnailUrl;
+
+    // ===== WorkIdentifier 와의 관계 추가 =====
+    @OneToMany(mappedBy = "work", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<WorkIdentifier> identifiers = new ArrayList<>();
+    // =====================================
 
     @PrePersist
     protected void onCreate() {
