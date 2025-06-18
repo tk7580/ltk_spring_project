@@ -191,7 +191,6 @@
             .action-buttons { justify-content: flex-start; }
         }
 
-        /* 반응형 헤더를 위한 미디어 쿼리 */
         @media (max-width: 680px) {
             .user-info-header, .login-prompt-header { display: none; }
             .logo-desktop { display: none; }
@@ -231,11 +230,7 @@
     <div class="header-right">
         <input type="text" class="header-search-input" placeholder="검색...">
         <a href="#" class="search-icon-header" aria-label="검색">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </a>
     </div>
 </header>
@@ -254,7 +249,7 @@
         <div th:if="${currentUser != null}">
             <li><a href="#">마이페이지</a></li>
             <li><a href="#">구독한 시리즈</a></li>
-            <li><a href="#">찜한 작품</a></li>
+            <li><a th:href="@{/member/wishlist}">찜한 작품</a></li>
             <li><a href="#">감상 완료한 작품</a></li>
         </div>
         <div th:unless="${currentUser != null}">

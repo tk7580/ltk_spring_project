@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
+<head>
+  <title>찜한 작품 - PlotPath</title>
+</head>
+<th:block layout:fragment="content">
+  <main class="main-content">
+    <section class="content-section">
+      <h2>찜한 작품 목록</h2>
+
+      <div th:if="${#lists.isEmpty(wishlistedWorks)}">
+        <p>아직 찜한 작품이 없습니다.</p>
+      </div>
+
+      <div class="work-list" th:unless="${#lists.isEmpty(wishlistedWorks)}">
+        <div class="work-card" th:each="work : ${wishlistedWorks}">
+          <a th:href="@{'/work/' + ${work.id}}">
+            <img th:src="${work.thumbnailUrl != null ? work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
+            <div class="work-info">
+              <h3 th:text="${work.titleKr}">작품 제목</h3>
+              <p th:text="${work.type}">작품 타입</p>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+</th:block>
+</html>
