@@ -32,18 +32,27 @@ public class WorkController {
         model.addAttribute("work", work);
 
         boolean isWishlisted = false;
-        boolean isWatched = false; // isWatched 변수 추가
+        boolean isWatched = false;
 
         if (principal != null) {
             Member member = memberRepository.findByLoginId(principal.getName()).orElse(null);
             if (member != null) {
                 model.addAttribute("currentUser", member);
                 isWishlisted = userActivityService.isWorkWishlisted(member.getId(), id);
-                isWatched = userActivityService.isWorkWatched(member.getId(), id); // 시청여부 조회 로직 추가
+                isWatched = userActivityService.isWorkWatched(member.getId(), id);
+
+                // ===== 이 부분이 수정됩니다. =====
+                // userRating 객체 통째로가 아닌, 필요한 데이터만 각각 전달합니다.
+                userActivityService.findUserRatingForWork(member.getId(), id)
+                        .ifPresent(rating -> {
+                            model.addAttribute("userRatingScore", rating.getScore());
+                            model.addAttribute("userRatingComment", rating.getComment());
+                        });
+                // ===============================
             }
         }
         model.addAttribute("isWishlisted", isWishlisted);
-        model.addAttribute("isWatched", isWatched); // isWatched 값을 모델에 추가
+        model.addAttribute("isWatched", isWatched);
 
         return "work/detail";
     }

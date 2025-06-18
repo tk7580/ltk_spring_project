@@ -78,7 +78,6 @@ public class UserActivityService {
         if (watchedRepository.existsByMemberIdAndWorkId(memberId, workId)) {
             return;
         }
-
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다. id=" + memberId));
         Work work = workRepository.findById(workId)
@@ -89,14 +88,15 @@ public class UserActivityService {
                 .work(work)
                 .build();
         watchedRepository.save(watchedItem);
-
         removeWorkFromWishlist(memberId, workId);
     }
 
-    /**
-     * @return 실제로 시청 기록이 삭제되었으면 true, 원래 없었으면 false
-     */
     public boolean cancelWorkWatch(Long memberId, Long workId) {
+        // ===== 평점 기록을 먼저 삭제하는 로직 추가 =====
+        ratingRepository.findByMemberIdAndWorkId(memberId, workId)
+                .ifPresent(ratingRepository::delete);
+        // ===========================================
+
         return watchedRepository.findByMemberIdAndWorkId(memberId, workId)
                 .map(watchedWork -> {
                     watchedRepository.delete(watchedWork);
@@ -107,6 +107,11 @@ public class UserActivityService {
 
 
     // --- 작품 평가 기능 ---
+
+    @Transactional(readOnly = true)
+    public Optional<MemberWorkRating> findUserRatingForWork(Long memberId, Long workId) {
+        return ratingRepository.findByMemberIdAndWorkId(memberId, workId);
+    }
 
     public void rateWork(Long memberId, Long workId, BigDecimal score, String comment) {
         markWorkAsWatched(memberId, workId);
