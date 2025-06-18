@@ -45,14 +45,6 @@
             cursor: pointer;
             display: block;
             padding: 8px;
-            position: relative;
-            z-index: 1201;
-        }
-        .header .login-prompt-header a {
-            text-decoration: none;
-            color: #FF7043;
-            font-weight: 500;
-            font-size: 14px;
         }
         .header-center {
             position: absolute;
@@ -63,14 +55,15 @@
         .logo-link {
             text-decoration: none;
         }
-        /* ===== 로고 색상 변경 ===== */
         .logo-text {
             font-size: 22px;
             font-weight: bold;
             letter-spacing: -1px;
-            color: #2196F3; /* 파비콘의 파란색으로 변경 */
+            color: #2196F3;
         }
-        /* ======================== */
+        .logo-mobile {
+            display: none;
+        }
         .header-right {
             display: flex;
             align-items: center;
@@ -80,6 +73,17 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-shrink: 0;
+        }
+        .login-prompt-header {
+            flex-shrink: 0;
+        }
+        .login-prompt-header a {
+            text-decoration: none;
+            color: #FF7043;
+            font-weight: 500;
+            font-size: 14px;
+            white-space: nowrap;
         }
         .profile-placeholder {
             width: 32px;
@@ -101,6 +105,7 @@
             padding: 2px 6px;
             border-radius: 4px;
             margin-left: 2px;
+            white-space: nowrap;
         }
         .logout-link:hover {
             background-color: #f0f0f0;
@@ -112,10 +117,9 @@
             border-radius: 15px;
             font-size: 14px;
             width: 150px;
-            transition: width 0.3s ease-in-out;
         }
         .header .header-search-input:focus {
-            width: 200px;
+            border-color: #007bff;
         }
         .header .search-icon-header {
             font-size: 22px;
@@ -127,105 +131,29 @@
         .header .search-icon-header svg {
             display: block;
         }
-        .side-menu {
-            position: fixed; top: 0; left: 0; width: max-content; min-width: 220px;
-            max-width: 80vw; height: 100vh; background-color: #ffffff; border-right: 1px solid #e0e0e0;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.05); z-index: 1200;
-            box-sizing: border-box; transform: translateX(-105%); transition: transform 0.3s ease-in-out;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            padding: 0;
-        }
+
+        .side-menu { position: fixed; top: 0; left: 0; width: max-content; min-width: 220px; max-width: 80vw; height: 100vh; background-color: #ffffff; border-right: 1px solid #e0e0e0; box-shadow: 2px 0 10px rgba(0,0,0,0.05); z-index: 1200; box-sizing: border-box; transform: translateX(-105%); transition: transform 0.3s ease-in-out; overflow-y: auto; display: flex; flex-direction: column; padding: 0; }
         .side-menu.active { transform: translateX(0); }
-        .side-menu .close-menu-btn {
-            font-size: 24px; color: #555; background: none; border: none;
-            cursor: pointer; padding: 4px;
-        }
-        .side-menu .close-menu-btn:hover { color: #000; }
-        .side-menu-top {
-            padding: 10px 15px;
-        }
-        .side-menu-profile {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            padding: 10px;
-            border-bottom: 1px solid #f0f0f0;
-        }
-        .side-menu-profile-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .profile-placeholder-side {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            border: 1.5px solid #333;
-            flex-shrink: 0;
-        }
-        .user-nickname-side {
-            font-weight: bold;
-            font-size: 15px;
-        }
-        .side-menu-login-prompt {
-            font-size: 15px;
-            font-weight: 500;
-            color: #FF7043;
-        }
-        .side-menu-main {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            flex-grow: 1;
-        }
-        .side-menu-main li a, .side-menu-main li span {
-            display: block;
-            padding: 14px 25px;
-            text-decoration: none;
-            color: #333;
-            font-size: 16px;
-            white-space: nowrap;
-        }
-        .side-menu-main li a:hover {
-            background-color: #f0f0f0;
-        }
-        .menu-separator {
-            height: 1px;
-            background-color: #e0e0e0;
-            margin: 8px 0;
-        }
-        .disabled-link {
-            color: #aaa !important;
-            cursor: not-allowed;
-        }
-        .side-menu-bottom {
-            padding: 15px 25px;
-            border-top: 1px solid #e0e0e0;
-        }
-        .side-menu-bottom a {
-            display: block;
-            text-decoration: none;
-            color: #555;
-            font-size: 15px;
-        }
-        .side-menu-bottom a:hover {
-            color: #000;
-        }
-        .overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.5); z-index: 1100;
-        }
+        .side-menu-top { padding: 10px 15px; }
+        .side-menu-profile { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px; border-bottom: 1px solid #f0f0f0; }
+        .side-menu-profile-info { display: flex; align-items: center; gap: 12px; }
+        .close-menu-btn { font-size: 24px; color: #555; background: none; border: none; cursor: pointer; padding: 4px; }
+        .profile-placeholder-side { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid #333; flex-shrink: 0; }
+        .user-nickname-side { font-weight: bold; font-size: 15px; }
+        .side-menu-login-prompt { font-size: 15px; font-weight: 500; color: #FF7043; }
+        .side-menu-main { list-style: none; padding: 0; margin: 0; flex-grow: 1; }
+        .side-menu-main li a, .side-menu-main li span { display: block; padding: 14px 25px; text-decoration: none; color: #333; font-size: 16px; white-space: nowrap; }
+        .side-menu-main li a:hover { background-color: #f0f0f0; }
+        .menu-separator { height: 1px; background-color: #e0e0e0; margin: 8px 0; }
+        .disabled-link { color: #aaa !important; cursor: not-allowed; }
+        .side-menu-bottom { padding: 15px 25px; border-top: 1px solid #e0e0e0; }
+        .side-menu-bottom a { display: block; text-decoration: none; color: #555; font-size: 15px; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1100; }
         .overlay.active { display: block; }
         .main-content { padding: 15px; }
         .content-section { margin-bottom: 25px; background-color: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .content-section h2 { font-size: 18px; margin-top: 0; margin-bottom: 15px; color: #333; }
         .work-list { display: flex; overflow-x: auto; padding-bottom: 10px; gap: 15px; }
-        .work-list::-webkit-scrollbar { height: 8px; }
-        .work-list::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 4px; }
-        .work-list::-webkit-scrollbar-track { background-color: #f0f0f0; }
         .work-card { border: 1px solid #e0e0e0; border-radius: 8px; min-width: 140px; max-width: 160px; background-color: #fff; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .work-card a { text-decoration: none; color: inherit; display: block; }
         .work-card img { width: 100%; height: 200px; object-fit: cover; display: block; }
@@ -233,7 +161,6 @@
         .work-card h3 { font-size: 15px; margin: 0 0 5px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .work-card p { font-size: 13px; color: #666; margin: 0; }
 
-        /* 상세 페이지용 스타일 */
         .detail-section { max-width: 800px; margin: 0 auto; }
         .detail-poster-wrapper { text-align: center; margin-bottom: 25px; }
         .detail-poster-wrapper img { max-width: 100%; width: 350px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
@@ -263,6 +190,17 @@
             .action-buttons-wrapper { text-align: left; }
             .action-buttons { justify-content: flex-start; }
         }
+
+        /* 반응형 헤더를 위한 미디어 쿼리 */
+        @media (max-width: 680px) {
+            .user-info-header, .login-prompt-header { display: none; }
+            .logo-desktop { display: none; }
+            .logo-mobile { display: block; }
+        }
+
+        @media (max-width: 400px) {
+            .logo-mobile { display: none; }
+        }
     </style>
     <th:block layout:fragment="css"></th:block>
 </head>
@@ -273,6 +211,9 @@
 <header class="header">
     <div class="header-left">
         <a href="javascript:void(0);" class="menu-icon" id="menuToggleBtn">☰</a>
+        <a th:href="@{/}" class="logo-link logo-mobile">
+            <span class="logo-text">PlotPath</span>
+        </a>
         <div th:if="${currentUser == null}" class="login-prompt-header">
             <a th:href="@{/member/login}">로그인해주세요</a>
         </div>
@@ -282,7 +223,7 @@
             <a th:href="@{/member/logout}" class="logout-link">로그아웃</a>
         </div>
     </div>
-    <div class="header-center">
+    <div class="header-center logo-desktop">
         <a th:href="@{/}" class="logo-link">
             <span class="logo-text">PlotPath</span>
         </a>
