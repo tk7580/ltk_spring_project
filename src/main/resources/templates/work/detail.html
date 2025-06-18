@@ -239,6 +239,18 @@
           ratingValue.textContent = parseFloat(this.value).toFixed(1);
         });
 
+        // ===== 이 부분이 추가됩니다. =====
+        ratingComment.addEventListener("keydown", function(e) {
+          // Shift 키를 누르지 않은 상태에서 Enter 키가 눌렸을 때
+          if (e.key === 'Enter' && !e.shiftKey) {
+            // 기본 동작(줄바꿈)을 막습니다.
+            e.preventDefault();
+            // 저장 버튼을 대신 클릭해줍니다.
+            saveRatingBtn.click();
+          }
+        });
+        // ==============================
+
         saveRatingBtn.addEventListener("click", async function() {
           const workId = rateBtn.dataset.workId;
           const url = `/member/activity/work/${workId}/rate`;
