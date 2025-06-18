@@ -23,26 +23,25 @@
 </head>
 
 <body>
-<div class="modal-overlay" id="ratingModalOverlay"></div>
-<div class="modal-content" id="ratingModal">
-  <button class="modal-close-btn" id="closeRatingModalBtn">&times;</button>
-  <h2>평점 매기기</h2>
-  <div class="rating-control">
-    <div class="score-display">
-      <span id="ratingValue">8.0</span> / 10.0
-    </div>
-    <input type="range" id="ratingSlider" min="0.5" max="10" step="0.5" value="8.0">
-  </div>
-  <div class="rating-comment">
-    <textarea id="ratingComment" placeholder="작품에 대한 한 줄 평을 남겨주세요. (선택사항)"></textarea>
-  </div>
-  <div class="modal-actions">
-    <button class="btn" id="cancelRatingBtn">취소</button>
-    <button class="btn btn-primary" id="saveRatingBtn">저장</button>
-  </div>
-</div>
-
 <th:block layout:fragment="content">
+  <div class="modal-overlay" id="ratingModalOverlay"></div>
+  <div class="modal-content" id="ratingModal">
+    <button class="modal-close-btn" id="closeRatingModalBtn">&times;</button>
+    <h2>평점 매기기</h2>
+    <div class="rating-control">
+      <div class="score-display">
+        <span id="ratingValue">8.0</span> / 10.0
+      </div>
+      <input type="range" id="ratingSlider" min="0.5" max="10" step="0.5" value="8.0">
+    </div>
+    <div class="rating-comment">
+      <textarea id="ratingComment" placeholder="작품에 대한 한 줄 평을 남겨주세요. (선택사항)"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="cancelRatingBtn">취소</button>
+      <button class="btn btn-primary" id="saveRatingBtn">저장</button>
+    </div>
+  </div>
   <main class="main-content">
     <section class="content-section detail-section">
       <div class="detail-container">
@@ -108,12 +107,10 @@
         wishlistBtn.addEventListener("click", async function(e) {
           e.preventDefault();
           if (!currentUser) { alert("로그인이 필요한 기능입니다."); window.location.href = "/member/login"; return; }
-
           this.classList.add('request-loading');
           const workId = this.dataset.workId;
           const url = `/member/activity/work/${workId}/wishlist`;
           const method = this.classList.contains("wish-active") ? 'DELETE' : 'POST';
-
           try {
             const response = await fetch(url, { method: method });
             if (response.ok) { this.classList.toggle("wish-active"); }
@@ -130,11 +127,9 @@
           e.preventDefault();
           if (!currentUser) { alert("로그인이 필요한 기능입니다."); window.location.href = "/member/login"; return; }
           if (!confirm("작품을 시청 완료 처리하시겠습니까?\n시청 완료 시, 찜 목록에서 자동으로 제외됩니다.")) return;
-
           this.classList.add('request-loading');
           const workId = this.dataset.workId;
           const url = `/member/activity/work/${workId}/watch`;
-
           try {
             const response = await fetch(url, { method: 'POST' });
             if (response.ok) { alert("시청 완료 처리되었습니다."); window.location.reload(); }
@@ -151,11 +146,9 @@
           e.preventDefault();
           if (!currentUser) { alert("로그인이 필요한 기능입니다."); window.location.href = "/member/login"; return; }
           if (!confirm("시청 완료 상태를 취소하시겠습니까?")) return;
-
           this.classList.add('request-loading');
           const workId = this.dataset.workId;
           const url = `/member/activity/work/${workId}/watch`;
-
           try {
             const response = await fetch(url, { method: 'DELETE' });
             if (response.ok) { alert("시청 완료를 취소했습니다."); window.location.reload(); }
@@ -170,60 +163,36 @@
       const ratingModal = document.querySelector("#ratingModal");
       const ratingModalOverlay = document.querySelector("#ratingModalOverlay");
       const closeRatingModalBtn = document.querySelector("#closeRatingModalBtn");
-      const cancelRatingBtn = document.querySelector("#cancelRatingBtn");
+      const cancelRatingBtnInModal = document.querySelector("#cancelRatingBtn");
       const saveRatingBtn = document.querySelector("#saveRatingBtn");
       const ratingSlider = document.querySelector("#ratingSlider");
       const ratingValue = document.querySelector("#ratingValue");
       const ratingComment = document.querySelector("#ratingComment");
 
-      // 모든 평점 관련 요소가 존재하는지 한번에 확인
-      if (rateBtn && ratingModal && ratingModalOverlay && closeRatingModalBtn && cancelRatingBtn && saveRatingBtn && ratingSlider && ratingValue && ratingComment) {
+      if (rateBtn && ratingModal) {
+        const openModal = () => { ratingModal.style.display = 'block'; ratingModalOverlay.style.display = 'block'; };
+        const closeModal = () => { ratingModal.style.display = 'none'; ratingModalOverlay.style.display = 'none'; };
 
-        const openModal = () => {
-          ratingModal.style.display = 'block';
-          ratingModalOverlay.style.display = 'block';
-        };
-        const closeModal = () => {
-          ratingModal.style.display = 'none';
-          ratingModalOverlay.style.display = 'none';
-        };
-
-        rateBtn.addEventListener("click", (e) => {
-          e.preventDefault();
-          openModal();
-        });
-
+        rateBtn.addEventListener("click", (e) => { e.preventDefault(); openModal(); });
         closeRatingModalBtn.addEventListener("click", closeModal);
-        cancelRatingBtn.addEventListener("click", closeModal);
+        cancelRatingBtnInModal.addEventListener("click", closeModal);
         ratingModalOverlay.addEventListener("click", closeModal);
-
-        ratingSlider.addEventListener("input", function() {
-          ratingValue.textContent = parseFloat(this.value).toFixed(1);
-        });
+        ratingSlider.addEventListener("input", function() { ratingValue.textContent = parseFloat(this.value).toFixed(1); });
 
         saveRatingBtn.addEventListener("click", async function() {
           const workId = rateBtn.dataset.workId;
           const url = `/member/activity/work/${workId}/rate`;
           this.classList.add('request-loading');
-
           try {
             const response = await fetch(url, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ score: ratingSlider.value, comment: ratingComment.value })
             });
-
-            if (response.ok) {
-              alert("평점이 등록되었습니다.");
-              closeModal();
-            } else {
-              alert("오류: " + await response.text());
-            }
-          } catch (error) {
-            alert("요청 중 오류가 발생했습니다.");
-          } finally {
-            this.classList.remove('request-loading');
-          }
+            if (response.ok) { alert("평점이 등록되었습니다."); closeModal(); }
+            else { alert("오류: " + await response.text()); }
+          } catch (error) { alert("요청 중 오류가 발생했습니다."); }
+          finally { this.classList.remove('request-loading'); }
         });
       }
     });
