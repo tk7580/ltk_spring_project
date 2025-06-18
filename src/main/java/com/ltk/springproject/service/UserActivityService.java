@@ -36,9 +36,9 @@ public class UserActivityService {
         return wishlistRepository.findByMemberIdAndWorkId(memberId, workId).isPresent();
     }
 
-    public void addWorkToWishlist(Long memberId, Long workId) {
+    public boolean addWorkToWishlist(Long memberId, Long workId) {
         if (isWorkWishlisted(memberId, workId)) {
-            return; // 이미 찜 목록에 있으면 아무것도 하지 않음
+            return false;
         }
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다. id=" + memberId));
@@ -51,19 +51,30 @@ public class UserActivityService {
                 .build();
 
         wishlistRepository.save(wishlistItem);
+        return true;
     }
 
-    public void removeWorkFromWishlist(Long memberId, Long workId) {
-        wishlistRepository.findByMemberIdAndWorkId(memberId, workId)
-                .ifPresent(wishlistRepository::delete);
+    public boolean removeWorkFromWishlist(Long memberId, Long workId) {
+        Optional<MemberWishlistWork> wishlistItem = wishlistRepository.findByMemberIdAndWorkId(memberId, workId);
+
+        if (wishlistItem.isPresent()) {
+            wishlistRepository.delete(wishlistItem.get());
+            return true;
+        }
+
+        return false;
     }
 
 
     // --- 감상 완료 기능 ---
 
+    @Transactional(readOnly = true)
+    public boolean isWorkWatched(Long memberId, Long workId) {
+        return watchedRepository.existsByMemberIdAndWorkId(memberId, workId);
+    }
+
     @Transactional
     public void markWorkAsWatched(Long memberId, Long workId) {
-        // 이미 감상 완료 목록에 있다면 아무것도 하지 않음
         if (watchedRepository.existsByMemberIdAndWorkId(memberId, workId)) {
             return;
         }
@@ -79,15 +90,25 @@ public class UserActivityService {
                 .build();
         watchedRepository.save(watchedItem);
 
-        // 감상 완료 시, 찜 목록에 있었다면 자동으로 제거
         removeWorkFromWishlist(memberId, workId);
+    }
+
+    /**
+     * @return 실제로 시청 기록이 삭제되었으면 true, 원래 없었으면 false
+     */
+    public boolean cancelWorkWatch(Long memberId, Long workId) {
+        return watchedRepository.findByMemberIdAndWorkId(memberId, workId)
+                .map(watchedWork -> {
+                    watchedRepository.delete(watchedWork);
+                    return true;
+                })
+                .orElse(false);
     }
 
 
     // --- 작품 평가 기능 ---
 
     public void rateWork(Long memberId, Long workId, BigDecimal score, String comment) {
-        // 평점을 남기면, 자동으로 '감상 완료' 처리
         markWorkAsWatched(memberId, workId);
 
         Member member = memberRepository.findById(memberId)
@@ -98,13 +119,11 @@ public class UserActivityService {
         Optional<MemberWorkRating> existingRatingOpt = ratingRepository.findByMemberIdAndWorkId(memberId, workId);
 
         if (existingRatingOpt.isPresent()) {
-            // 이미 평점이 있으면 점수와 코멘트만 업데이트
             MemberWorkRating existingRating = existingRatingOpt.get();
             existingRating.setScore(score);
             existingRating.setComment(comment);
             ratingRepository.save(existingRating);
         } else {
-            // 평점이 없으면 새로 생성
             MemberWorkRating newRating = MemberWorkRating.builder()
                     .member(member)
                     .work(work)

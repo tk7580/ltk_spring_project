@@ -32,14 +32,18 @@ public class WorkController {
         model.addAttribute("work", work);
 
         boolean isWishlisted = false;
+        boolean isWatched = false; // isWatched 변수 추가
+
         if (principal != null) {
             Member member = memberRepository.findByLoginId(principal.getName()).orElse(null);
             if (member != null) {
                 model.addAttribute("currentUser", member);
                 isWishlisted = userActivityService.isWorkWishlisted(member.getId(), id);
+                isWatched = userActivityService.isWorkWatched(member.getId(), id); // 시청여부 조회 로직 추가
             }
         }
         model.addAttribute("isWishlisted", isWishlisted);
+        model.addAttribute("isWatched", isWatched); // isWatched 값을 모델에 추가
 
         return "work/detail";
     }
