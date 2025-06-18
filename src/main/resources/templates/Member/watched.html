@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
+<head>
+  <title>감상 완료한 작품 - PlotPath</title>
+  <style>
+    .work-card .my-rating {
+      font-size: 13px;
+      padding: 8px 10px;
+      border-top: 1px solid #f0f0f0;
+      color: #495057;
+    }
+    .work-card .my-rating .score {
+      font-weight: bold;
+      color: #fd7e14;
+    }
+    .work-card .my-rating .score::before {
+      content: '★';
+      margin-right: 3px;
+    }
+    .work-card .my-rating .comment {
+      margin-top: 4px;
+      font-style: italic;
+      /* 긴 코멘트는 잘라내기 */
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+    }
+  </style>
+</head>
+<th:block layout:fragment="content">
+  <main class="main-content">
+    <section class="content-section">
+      <h2>감상 완료한 작품 목록</h2>
+
+      <div th:if="${#lists.isEmpty(watchedWorks)}">
+        <p>아직 감상 완료한 작품이 없습니다.</p>
+      </div>
+
+      <div class="work-list" th:unless="${#lists.isEmpty(watchedWorks)}">
+        <div class="work-card" th:each="dto : ${watchedWorks}">
+          <a th:href="@{'/work/' + ${dto.work.id}}">
+            <img th:src="${dto.work.thumbnailUrl != null ? dto.work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
+            <div class="work-info">
+              <h3 th:text="${dto.work.titleKr}">작품 제목</h3>
+              <p th:text="${dto.work.type}">작품 타입</p>
+            </div>
+          </a>
+          <div class="my-rating" th:if="${dto.score != null}">
+            <span class="score" th:text="${dto.score}"></span>
+            <span class="comment" th:text="${dto.comment}" th:if="${dto.comment != null and !dto.comment.isEmpty()}"></span>
+          </div>
+          <div class="my-rating" th:if="${dto.score == null}">
+            <span>- 평점 없음 -</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</th:block>
+</html>

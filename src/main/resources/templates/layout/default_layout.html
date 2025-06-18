@@ -250,7 +250,7 @@
             <li><a href="#">마이페이지</a></li>
             <li><a href="#">구독한 시리즈</a></li>
             <li><a th:href="@{/member/wishlist}">찜한 작품</a></li>
-            <li><a href="#">감상 완료한 작품</a></li>
+            <li><a th:href="@{/member/watched}">감상 완료한 작품</a></li>
         </div>
         <div th:unless="${currentUser != null}">
             <li><span class="disabled-link">마이페이지</span></li>

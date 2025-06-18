@@ -1,6 +1,7 @@
 package com.ltk.springproject.service;
 
 import com.ltk.springproject.domain.*;
+import com.ltk.springproject.dto.WatchedWorkDto;
 import com.ltk.springproject.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -73,6 +74,29 @@ public class UserActivityService {
         return watchedRepository.existsByMemberIdAndWorkId(memberId, workId);
     }
 
+    @Transactional(readOnly = true)
+    public List<WatchedWorkDto> findWatchedWorksByMemberId(Long memberId) {
+        // 1. 사용자의 감상 완료 목록을 가져옴
+        List<MemberWatchedWork> watchedWorks = watchedRepository.findByMemberId(memberId);
+
+        // 2. 감상 완료 목록을 순회하며 DTO 리스트를 생성
+        return watchedWorks.stream()
+                .map(watchedWork -> {
+                    Work work = watchedWork.getWork();
+                    // 3. 각 작품에 대한 평점 정보를 조회
+                    Optional<MemberWorkRating> ratingOpt = findUserRatingForWork(memberId, work.getId());
+
+                    // 4. 평점 정보 유무에 따라 DTO를 생성하여 반환
+                    if (ratingOpt.isPresent()) {
+                        MemberWorkRating rating = ratingOpt.get();
+                        return new WatchedWorkDto(work, rating.getScore(), rating.getComment());
+                    } else {
+                        return new WatchedWorkDto(work, null, null);
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public void markWorkAsWatched(Long memberId, Long workId) {
         if (watchedRepository.existsByMemberIdAndWorkId(memberId, workId)) {
@@ -92,10 +116,8 @@ public class UserActivityService {
     }
 
     public boolean cancelWorkWatch(Long memberId, Long workId) {
-        // ===== 평점 기록을 먼저 삭제하는 로직 추가 =====
         ratingRepository.findByMemberIdAndWorkId(memberId, workId)
                 .ifPresent(ratingRepository::delete);
-        // ===========================================
 
         return watchedRepository.findByMemberIdAndWorkId(memberId, workId)
                 .map(watchedWork -> {
