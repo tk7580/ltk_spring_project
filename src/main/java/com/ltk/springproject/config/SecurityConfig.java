@@ -45,7 +45,8 @@ public class SecurityConfig {
                                 "/favicon-16x16.png",
                                 // ===== 아래 경로들을 permitAll()에 추가합니다 =====
                                 "/chart/**",
-                                "/works/**"
+                                "/works/**",
+                                "/work/**"
                                 // ==========================================
                         ).permitAll()
                         .requestMatchers("/member/**").authenticated()

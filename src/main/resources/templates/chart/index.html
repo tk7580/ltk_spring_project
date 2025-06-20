@@ -2,49 +2,17 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
 <head>
     <title>인기 작품 차트 - PlotPath</title>
-    <style>
-        .chart-filters {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-        }
-        .chart-filters .filter-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .chart-filters .filter-group strong {
-            font-size: 14px;
-        }
-        .chart-filters .btn-filter {
-            padding: 6px 12px;
-            font-size: 14px;
-            border: 1px solid #dee2e6;
-            background-color: #fff;
-            border-radius: 20px;
-            text-decoration: none;
-            color: #495057;
-            transition: all 0.2s;
-        }
-        .chart-filters .btn-filter:hover {
-            background-color: #e9ecef;
-        }
-        .chart-filters .btn-filter.active {
-            background-color: #2196F3;
-            color: #fff;
-            border-color: #2196F3;
-            font-weight: bold;
-        }
-        .work-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 20px;
-        }
-    </style>
+    <th:block layout:fragment="css">
+        <style>
+            .chart-filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; align-items: center; }
+            .chart-filters .filter-group { display: flex; align-items: center; gap: 10px; }
+            .chart-filters .filter-group strong { font-size: 14px; margin-right: 5px; }
+            .chart-filters .btn-filter { padding: 6px 12px; font-size: 14px; border: 1px solid #dee2e6; background-color: #fff; border-radius: 20px; text-decoration: none; color: #495057; transition: all 0.2s; }
+            .chart-filters .btn-filter:hover { background-color: #e9ecef; }
+            .chart-filters .btn-filter.active { background-color: #2196F3; color: #fff; border-color: #2196F3; font-weight: bold; }
+            .work-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; }
+        </style>
+    </th:block>
 </head>
 <th:block layout:fragment="content">
     <main class="main-content">
@@ -54,10 +22,13 @@
             <div class="chart-filters">
                 <div class="filter-group">
                     <strong>타입:</strong>
-                    <a th:href="@{/chart(type='Movie', sortBy=${selectedSortBy})}"
-                       th:classappend="${selectedType == 'Movie'} ? 'active'" class="btn-filter">영화</a>
-                    <a th:href="@{/chart(type='TV', sortBy=${selectedSortBy})}"
-                       th:classappend="${selectedType == 'TV'} ? 'active'" class="btn-filter">TV</a>
+                    <a th:href="@{/chart(type='All', sortBy=${selectedSortBy})}"
+                       th:classappend="${selectedType == 'All'} ? 'active'" class="btn-filter">전체</a>
+                    <a th:each="workType : ${workTypes}"
+                       th:href="@{/chart(type=${workType}, sortBy=${selectedSortBy})}"
+                       th:text="${workType}"
+                       th:classappend="${selectedType == workType} ? 'active'"
+                       class="btn-filter"></a>
                 </div>
                 <div class="filter-group">
                     <strong>정렬:</strong>

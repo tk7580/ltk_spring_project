@@ -24,23 +24,27 @@ public class WorkService {
         return workRepository.findById(workId);
     }
 
-    // ===== 차트 페이지를 위한 메소드 추가 =====
+    /**
+     * 인기 차트 페이지를 위한 작품 목록을 조회하고 정렬합니다.
+     * @param type 작품 타입 ("Movie", "TV", 또는 "All")
+     * @param sortBy 정렬 기준 ("rating" 또는 "newest")
+     * @return 정렬된 작품 엔티티 리스트
+     */
     public List<Work> findWorksForChart(String type, String sortBy) {
-        boolean isAllTypes = type == null || type.isEmpty() || type.equals("All");
+        boolean isAllTypes = type == null || type.isEmpty() || "All".equalsIgnoreCase(type);
 
         if ("rating".equalsIgnoreCase(sortBy)) {
-            if (isAllTypes) {
-                return workRepository.findAllByOrderByAverageRatingDesc();
-            } else {
-                return workRepository.findByTypeOrderByAverageRatingDesc(type);
-            }
-        } else { // 기본값은 최신순 (releaseDate)
-            if (isAllTypes) {
-                return workRepository.findAllByOrderByReleaseDateDesc();
-            } else {
-                return workRepository.findByTypeOrderByReleaseDateDesc(type);
-            }
+            return isAllTypes ? workRepository.findAllByOrderByAverageRatingDesc() : workRepository.findByTypeOrderByAverageRatingDesc(type);
+        } else { // 기본값은 최신순 (newest)
+            return isAllTypes ? workRepository.findAllByOrderByReleaseDateDesc() : workRepository.findByTypeOrderByReleaseDateDesc(type);
         }
     }
-    // =====================================
+
+    /**
+     * DB에 있는 모든 작품의 type을 중복 없이 조회합니다. (동적 필터 버튼 생성용)
+     * @return 작품 타입 문자열 리스트
+     */
+    public List<String> findAllWorkTypes() {
+        return workRepository.findDistinctTypes();
+    }
 }
