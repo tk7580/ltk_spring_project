@@ -20,8 +20,6 @@ public class Work {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // tmdbId 필드 삭제
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seriesId")
     private Series series;
@@ -60,10 +58,14 @@ public class Work {
     @Column(name = "thumbnailUrl")
     private String thumbnailUrl;
 
-    // ===== WorkIdentifier 와의 관계 추가 =====
     @OneToMany(mappedBy = "work", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<WorkIdentifier> identifiers = new ArrayList<>();
+
+    // ===== WorkGenre 와의 관계 추가 =====
+    @OneToMany(mappedBy = "work", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<WorkGenre> workGenres = new ArrayList<>();
     // =====================================
 
     @PrePersist
