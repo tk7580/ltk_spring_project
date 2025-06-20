@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
+<head>
+    <title>인기 작품 차트 - PlotPath</title>
+    <style>
+        .chart-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .chart-filters .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .chart-filters .filter-group strong {
+            font-size: 14px;
+        }
+        .chart-filters .btn-filter {
+            padding: 6px 12px;
+            font-size: 14px;
+            border: 1px solid #dee2e6;
+            background-color: #fff;
+            border-radius: 20px;
+            text-decoration: none;
+            color: #495057;
+            transition: all 0.2s;
+        }
+        .chart-filters .btn-filter:hover {
+            background-color: #e9ecef;
+        }
+        .chart-filters .btn-filter.active {
+            background-color: #2196F3;
+            color: #fff;
+            border-color: #2196F3;
+            font-weight: bold;
+        }
+        .work-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 20px;
+        }
+    </style>
+</head>
+<th:block layout:fragment="content">
+    <main class="main-content">
+        <section class="content-section">
+            <h2>인기 작품 차트</h2>
+
+            <div class="chart-filters">
+                <div class="filter-group">
+                    <strong>타입:</strong>
+                    <a th:href="@{/chart(type='Movie', sortBy=${selectedSortBy})}"
+                       th:classappend="${selectedType == 'Movie'} ? 'active'" class="btn-filter">영화</a>
+                    <a th:href="@{/chart(type='TV', sortBy=${selectedSortBy})}"
+                       th:classappend="${selectedType == 'TV'} ? 'active'" class="btn-filter">TV</a>
+                </div>
+                <div class="filter-group">
+                    <strong>정렬:</strong>
+                    <a th:href="@{/chart(type=${selectedType}, sortBy='rating')}"
+                       th:classappend="${selectedSortBy == 'rating'} ? 'active'" class="btn-filter">평점순</a>
+                    <a th:href="@{/chart(type=${selectedType}, sortBy='newest')}"
+                       th:classappend="${selectedSortBy == 'newest'} ? 'active'" class="btn-filter">최신순</a>
+                </div>
+            </div>
+
+            <div th:if="${#lists.isEmpty(works)}">
+                <p>표시할 작품이 없습니다.</p>
+            </div>
+
+            <div class="work-grid" th:unless="${#lists.isEmpty(works)}">
+                <div class="work-card" th:each="work : ${works}">
+                    <a th:href="@{'/work/' + ${work.id}}">
+                        <img th:src="${work.thumbnailUrl != null ? work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
+                        <div class="work-info">
+                            <h3 th:text="${work.titleKr}">작품 제목</h3>
+                            <p th:text="${work.type}">작품 타입</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+</th:block>
+</html>

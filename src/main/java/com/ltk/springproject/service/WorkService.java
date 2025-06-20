@@ -16,20 +16,31 @@ public class WorkService {
 
     private final WorkRepository workRepository;
 
-    /**
-     * 모든 작품 목록을 조회합니다.
-     * @return 작품 엔티티 리스트
-     */
     public List<Work> findAllWorks() {
         return workRepository.findAll();
     }
 
-    /**
-     * ID로 작품 한 개를 조회합니다.
-     * @param workId 작품의 ID
-     * @return 작품 엔티티. 존재하지 않을 경우 Optional.empty()
-     */
     public Optional<Work> findWorkById(Long workId) {
         return workRepository.findById(workId);
     }
+
+    // ===== 차트 페이지를 위한 메소드 추가 =====
+    public List<Work> findWorksForChart(String type, String sortBy) {
+        boolean isAllTypes = type == null || type.isEmpty() || type.equals("All");
+
+        if ("rating".equalsIgnoreCase(sortBy)) {
+            if (isAllTypes) {
+                return workRepository.findAllByOrderByAverageRatingDesc();
+            } else {
+                return workRepository.findByTypeOrderByAverageRatingDesc(type);
+            }
+        } else { // 기본값은 최신순 (releaseDate)
+            if (isAllTypes) {
+                return workRepository.findAllByOrderByReleaseDateDesc();
+            } else {
+                return workRepository.findByTypeOrderByReleaseDateDesc(type);
+            }
+        }
+    }
+    // =====================================
 }

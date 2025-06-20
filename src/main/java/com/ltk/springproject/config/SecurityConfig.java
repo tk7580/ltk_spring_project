@@ -1,6 +1,5 @@
 package com.ltk.springproject.config;
 
-import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -43,9 +42,12 @@ public class SecurityConfig {
                                 "/favicon.ico",
                                 "/apple-touch-icon.png",
                                 "/favicon-32x32.png",
-                                "/favicon-16x16.png"
+                                "/favicon-16x16.png",
+                                // ===== 아래 경로들을 permitAll()에 추가합니다 =====
+                                "/chart/**",
+                                "/works/**"
+                                // ==========================================
                         ).permitAll()
-                        // ===== /member/ 하위 모든 경로에 대해 인증을 요구하도록 명시 =====
                         .requestMatchers("/member/**").authenticated()
                         .anyRequest().authenticated()
                 )
