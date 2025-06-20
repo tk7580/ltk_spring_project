@@ -107,10 +107,6 @@
             margin-left: 2px;
             white-space: nowrap;
         }
-        .logout-link:hover {
-            background-color: #f0f0f0;
-            border-color: #aaa;
-        }
         .header .header-search-input {
             padding: 6px 10px;
             border: 1px solid #ccc;
@@ -131,7 +127,6 @@
         .header .search-icon-header svg {
             display: block;
         }
-
         .side-menu { position: fixed; top: 0; left: 0; width: max-content; min-width: 220px; max-width: 80vw; height: 100vh; background-color: #ffffff; border-right: 1px solid #e0e0e0; box-shadow: 2px 0 10px rgba(0,0,0,0.05); z-index: 1200; box-sizing: border-box; transform: translateX(-105%); transition: transform 0.3s ease-in-out; overflow-y: auto; display: flex; flex-direction: column; padding: 0; }
         .side-menu.active { transform: translateX(0); }
         .side-menu-top { padding: 10px 15px; }
@@ -148,6 +143,37 @@
         .disabled-link { color: #aaa !important; cursor: not-allowed; }
         .side-menu-bottom { padding: 15px 25px; border-top: 1px solid #e0e0e0; }
         .side-menu-bottom a { display: block; text-decoration: none; color: #555; font-size: 15px; }
+        .side-menu-main .has-submenu > a {
+            cursor: pointer;
+            position: relative;
+        }
+        .side-menu-main .has-submenu > a::after {
+            content: '›';
+            position: absolute;
+            right: 20px;
+            font-size: 20px;
+            transition: transform 0.2s;
+        }
+        .side-menu-main .has-submenu.active > a::after {
+            transform: rotate(90deg);
+        }
+        .submenu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            background-color: #f8f9fa;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out;
+        }
+        .side-menu-main .has-submenu.active .submenu {
+            max-height: 500px;
+        }
+        .submenu li a {
+            padding-left: 40px;
+            font-size: 15px;
+            color: #495057;
+        }
         .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1100; }
         .overlay.active { display: block; }
         .main-content { padding: 15px; }
@@ -161,42 +187,11 @@
         .work-card h3 { font-size: 15px; margin: 0 0 5px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .work-card p { font-size: 13px; color: #666; margin: 0; }
 
-        .detail-section { max-width: 800px; margin: 0 auto; }
-        .detail-poster-wrapper { text-align: center; margin-bottom: 25px; }
-        .detail-poster-wrapper img { max-width: 100%; width: 350px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-        .detail-title-wrapper { text-align: center; margin-bottom: 20px; padding-bottom: 20px; }
-        .detail-title-wrapper h1 { margin-bottom: 5px; font-size: 2.2em; }
-        .detail-title-wrapper .title-original { font-size: 1.1em; color: #888; }
-        .detail-meta-list { list-style: none; padding: 20px; margin: 25px 0; border: 1px solid #e0e0e0; border-radius: 8px; }
-        .detail-meta-list li { margin-bottom: 12px; font-size: 16px; display: flex; }
-        .detail-meta-list li:last-child { margin-bottom: 0; }
-        .detail-meta-list strong { flex-shrink: 0; width: 100px; color: #555; }
-        .detail-separator { height: 1px; background-color: #e0e0e0; margin: 30px 0; }
-        .detail-description { font-size: 16px; line-height: 1.8; color: #333; white-space: pre-wrap; }
-        .action-buttons-wrapper { text-align: center; margin-top: 30px; }
-        .action-buttons { display: flex; gap: 15px; justify-content: center; }
-        .action-buttons .btn { display: flex; align-items: center; gap: 8px; padding: 10px 20px; border: 1px solid #ccc; border-radius: 25px; text-decoration: none; font-weight: bold; cursor: pointer; font-size: 16px; transition: background-color 0.2s; }
-        .action-buttons .btn svg { width: 20px; height: 20px; }
-        .btn-wishlist { background-color: #fff; color: #333; border-color: #ccc; }
-        .btn-wishlist:hover { background-color: #f5f5f5; }
-        .btn-rate { background-color: #fff; color: #333; border-color: #ccc; }
-        .btn-rate:hover { background-color: #f5f5f5; }
-        @media (min-width: 768px) {
-            .detail-container { display: flex; gap: 30px; text-align: left; }
-            .detail-poster-wrapper { text-align: left; margin-bottom: 0; }
-            .detail-poster-wrapper img { width: 300px; }
-            .detail-info { flex-grow: 1; }
-            .detail-title-wrapper { text-align: left; }
-            .action-buttons-wrapper { text-align: left; }
-            .action-buttons { justify-content: flex-start; }
-        }
-
         @media (max-width: 680px) {
             .user-info-header, .login-prompt-header { display: none; }
             .logo-desktop { display: none; }
             .logo-mobile { display: block; }
         }
-
         @media (max-width: 400px) {
             .logo-mobile { display: none; }
         }
@@ -230,7 +225,11 @@
     <div class="header-right">
         <input type="text" class="header-search-input" placeholder="검색...">
         <a href="#" class="search-icon-header" aria-label="검색">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
         </a>
     </div>
 </header>
@@ -259,7 +258,20 @@
             <li><span class="disabled-link">감상 완료한 작품</span></li>
         </div>
         <li class="menu-separator"></li>
-        <li><a href="#">인기차트</a></li>
+
+        <li><a th:href="@{/home}">홈</a></li>
+        <li class="has-submenu">
+            <a href="javascript:void(0);" id="workListToggle">작품 목록</a>
+            <ul class="submenu">
+                <li><a href="#">영화</a></li>
+                <li><a href="#">TV 시리즈</a></li>
+                <li><a href="#">TV 단편</a></li>
+                <li><a href="#">애니메이션</a></li>
+                <li><a href="#">만화</a></li>
+                <li><a href="#">단편 만화</a></li>
+                <li><a href="#">소설</a></li>
+            </ul>
+        </li>
         <li><a href="#">게시판</a></li>
     </ul>
     <div class="side-menu-bottom">
@@ -284,15 +296,26 @@
         const sideMenu = document.getElementById('sideMenu');
         const closeSideMenuBtn = document.getElementById('closeSideMenuBtn');
         const pageOverlay = document.getElementById('pageOverlay');
+
         if (menuToggleBtn && sideMenu && pageOverlay && closeSideMenuBtn) {
             function openMenu() {
                 sideMenu.classList.add('active');
                 pageOverlay.classList.add('active');
             }
+
+            // ===== 이 함수 내부가 수정됩니다 =====
             function closeMenu() {
                 sideMenu.classList.remove('active');
                 pageOverlay.classList.remove('active');
+
+                // 사이드바가 닫힐 때, 열려있는 모든 하위 메뉴(.has-submenu)의 active 클래스를 제거
+                const openSubmenus = sideMenu.querySelectorAll('.has-submenu.active');
+                openSubmenus.forEach(submenu => {
+                    submenu.classList.remove('active');
+                });
             }
+            // ===================================
+
             menuToggleBtn.addEventListener('click', function (event) {
                 event.stopPropagation();
                 if (sideMenu.classList.contains('active')) {
@@ -301,12 +324,21 @@
                     openMenu();
                 }
             });
+
             closeSideMenuBtn.addEventListener('click', closeMenu);
             pageOverlay.addEventListener('click', closeMenu);
             document.addEventListener('keydown', function(event) {
                 if (event.key === 'Escape' && sideMenu.classList.contains('active')) {
                     closeMenu();
                 }
+            });
+        }
+
+        const workListToggle = document.getElementById('workListToggle');
+        if(workListToggle) {
+            workListToggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                this.parentElement.classList.toggle('active');
             });
         }
     });

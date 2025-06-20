@@ -191,3 +191,22 @@ CREATE TABLE `work_identifier`
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     UNIQUE KEY `UK_source` (`sourceName`, `sourceId`)
 );
+
+CREATE TABLE `genre`
+(
+    `id`         BIGINT      NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`    DATETIME    NOT NULL,
+    `updateDate` DATETIME    NOT NULL,
+    `name`       VARCHAR(50) NOT NULL UNIQUE
+);
+
+CREATE TABLE `work_genre`
+(
+    `id`      BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate` DATETIME NOT NULL,
+    `workId`  BIGINT   NOT NULL,
+    `genreId` BIGINT   NOT NULL,
+    FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`genreId`) REFERENCES `genre` (`id`) ON DELETE CASCADE,
+    UNIQUE KEY `UK_workId_genreId` (`workId`, `genreId`)
+);
