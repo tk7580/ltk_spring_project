@@ -15,17 +15,17 @@ import java.security.Principal;
 import java.util.List;
 
 @Controller
-@RequestMapping("/chart")
+@RequestMapping("/works")
 @RequiredArgsConstructor
-public class ChartController {
+public class WorkListController {
 
     private final WorkService workService;
     private final MemberRepository memberRepository;
 
     @GetMapping("")
-    public String showChartPage(
+    public String showListPage(
             @RequestParam(name = "type", required = false, defaultValue = "All") String type,
-            @RequestParam(name = "sortBy", required = false, defaultValue = "rating") String sortBy,
+            @RequestParam(name = "sortBy", required = false, defaultValue = "newest") String sortBy,
             Model model,
             Principal principal
     ) {
@@ -43,6 +43,12 @@ public class ChartController {
         model.addAttribute("selectedType", type);
         model.addAttribute("selectedSortBy", sortBy);
 
-        return "chart/index";
+        String pageTitle = "전체 작품";
+        if (!"All".equalsIgnoreCase(type)) {
+            pageTitle = type + " 목록";
+        }
+        model.addAttribute("pageTitle", pageTitle);
+
+        return "work/list";
     }
 }

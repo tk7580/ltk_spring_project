@@ -16,34 +16,20 @@ public class WorkService {
 
     private final WorkRepository workRepository;
 
-    public List<Work> findAllWorks() {
-        return workRepository.findAll();
-    }
-
     public Optional<Work> findWorkById(Long workId) {
         return workRepository.findById(workId);
     }
 
-    /**
-     * 인기 차트 페이지를 위한 작품 목록을 조회하고 정렬합니다.
-     * @param type 작품 타입 ("Movie", "TV", 또는 "All")
-     * @param sortBy 정렬 기준 ("rating" 또는 "newest")
-     * @return 정렬된 작품 엔티티 리스트
-     */
-    public List<Work> findWorksForChart(String type, String sortBy) {
+    public List<Work> findWorksByCriteria(String type, String sortBy) {
         boolean isAllTypes = type == null || type.isEmpty() || "All".equalsIgnoreCase(type);
 
         if ("rating".equalsIgnoreCase(sortBy)) {
             return isAllTypes ? workRepository.findAllByOrderByAverageRatingDesc() : workRepository.findByTypeOrderByAverageRatingDesc(type);
-        } else { // 기본값은 최신순 (newest)
+        } else { // "newest" 등 나머지 모든 경우는 최신순으로 처리
             return isAllTypes ? workRepository.findAllByOrderByReleaseDateDesc() : workRepository.findByTypeOrderByReleaseDateDesc(type);
         }
     }
 
-    /**
-     * DB에 있는 모든 작품의 type을 중복 없이 조회합니다. (동적 필터 버튼 생성용)
-     * @return 작품 타입 문자열 리스트
-     */
     public List<String> findAllWorkTypes() {
         return workRepository.findDistinctTypes();
     }

@@ -18,7 +18,7 @@ import java.util.Optional;
 public class HomeController {
 
     private final WorkService workService;
-    private final MemberRepository memberRepository; // Member 정보를 가져오기 위해 주입
+    private final MemberRepository memberRepository;
 
     @GetMapping("/")
     public String redirectToHome() {
@@ -27,21 +27,15 @@ public class HomeController {
 
     @GetMapping("/home")
     public String home(Model model, Principal principal) {
-        // --- 이 부분이 추가/수정되었습니다 ---
-        // 사용자가 로그인한 상태인지 확인
         if (principal != null) {
-            // principal.getName()은 현재 로그인된 사용자의 ID(여기서는 loginId)를 반환합니다.
-            String loginId = principal.getName();
-            // loginId를 사용해 DB에서 전체 Member 정보를 찾아옵니다.
-            Optional<Member> _member = memberRepository.findByLoginId(loginId);
-            // Member 정보가 존재하면, "currentUser"라는 이름으로 Model에 담습니다.
+            Optional<Member> _member = memberRepository.findByLoginId(principal.getName());
             if (_member.isPresent()){
                 model.addAttribute("currentUser", _member.get());
             }
         }
-        // ---------------------------------
 
-        List<Work> workList = workService.findAllWorks();
+        // '전체' 타입에 대해 '평점순'으로 정렬하여 작품 목록을 가져옵니다.
+        List<Work> workList = workService.findWorksByCriteria("All", "rating");
         model.addAttribute("popularWorks", workList);
 
         return "home";

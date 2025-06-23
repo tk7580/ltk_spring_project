@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
+<head>
+  <title th:text="${pageTitle} + ' - PlotPath'"></title>
+  <th:block layout:fragment="css">
+    <style>
+      .list-filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; align-items: center; }
+      .list-filters .filter-group { display: flex; align-items: center; gap: 10px; }
+      .list-filters .filter-group strong { font-size: 14px; margin-right: 5px; }
+      .list-filters .btn-filter { padding: 6px 12px; font-size: 14px; border: 1px solid #dee2e6; background-color: #fff; border-radius: 20px; text-decoration: none; color: #495057; transition: all 0.2s; }
+      .list-filters .btn-filter:hover { background-color: #e9ecef; }
+      .list-filters .btn-filter.active { background-color: #2196F3; color: #fff; border-color: #2196F3; font-weight: bold; }
+      .work-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; }
+    </style>
+  </th:block>
+</head>
+<th:block layout:fragment="content">
+  <main class="main-content">
+    <section class="content-section">
+      <h2 th:text="${pageTitle}">작품 목록</h2>
+
+      <div class="list-filters">
+        <div class="filter-group">
+          <strong>타입:</strong>
+          <a th:href="@{/works(type='All', sortBy=${selectedSortBy})}"
+             th:classappend="${selectedType == 'All'} ? 'active'" class="btn-filter">전체</a>
+          <a th:each="workType : ${workTypes}"
+             th:href="@{/works(type=${workType}, sortBy=${selectedSortBy})}"
+             th:text="${workType}"
+             th:classappend="${selectedType == workType} ? 'active'"
+             class="btn-filter"></a>
+        </div>
+        <div class="filter-group">
+          <strong>정렬:</strong>
+          <a th:href="@{/works(type=${selectedType}, sortBy='rating')}"
+             th:classappend="${selectedSortBy == 'rating'} ? 'active'" class="btn-filter">평점순</a>
+          <a th:href="@{/works(type=${selectedType}, sortBy='newest')}"
+             th:classappend="${selectedSortBy == 'newest'} ? 'active'" class="btn-filter">최신순</a>
+        </div>
+      </div>
+
+      <div th:if="${#lists.isEmpty(works)}">
+        <p>표시할 작품이 없습니다.</p>
+      </div>
+
+      <div class="work-grid" th:unless="${#lists.isEmpty(works)}">
+        <div class="work-card" th:each="work : ${works}">
+          <a th:href="@{'/work/' + ${work.id}}">
+            <img th:src="${work.thumbnailUrl != null ? work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
+            <div class="work-info">
+              <h3 th:text="${work.titleKr}">작품 제목</h3>
+              <p th:text="${work.type}">작품 타입</p>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+</th:block>
+</html>
