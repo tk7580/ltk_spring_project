@@ -24,9 +24,11 @@ public class WorkService {
         boolean isAllTypes = type == null || type.isEmpty() || "All".equalsIgnoreCase(type);
 
         if ("rating".equalsIgnoreCase(sortBy)) {
-            return isAllTypes ? workRepository.findAllByOrderByAverageRatingDesc() : workRepository.findByTypeOrderByAverageRatingDesc(type);
-        } else { // "newest" 등 나머지 모든 경우는 최신순으로 처리
-            return isAllTypes ? workRepository.findAllByOrderByReleaseDateDesc() : workRepository.findByTypeOrderByReleaseDateDesc(type);
+            // '전체' 타입일 경우, 커스텀 정렬 메소드를 호출하도록 변경
+            return isAllTypes ? workRepository.findAllByOrderByAverageRatingDescCustom() : workRepository.findByTypeOrderByAverageRatingDesc(type);
+        } else { // 기본값은 최신순 (newest)
+            // '전체' 타입일 경우, 커스텀 정렬 메소드를 호출하도록 변경
+            return isAllTypes ? workRepository.findAllByOrderByReleaseDateDescCustom() : workRepository.findByTypeOrderByReleaseDateDesc(type);
         }
     }
 

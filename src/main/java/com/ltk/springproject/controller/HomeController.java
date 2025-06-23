@@ -34,7 +34,7 @@ public class HomeController {
             }
         }
 
-        // '전체' 타입에 대해 '평점순'으로 정렬하여 작품 목록을 가져옵니다.
+        // '전체(All)' 타입에 대해 '평점순(rating)'으로 정렬하는 새 메소드 호출
         List<Work> workList = workService.findWorksByCriteria("All", "rating");
         model.addAttribute("popularWorks", workList);
 

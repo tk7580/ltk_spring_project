@@ -4,55 +4,95 @@
     <title>인기 작품 차트 - PlotPath</title>
     <th:block layout:fragment="css">
         <style>
-            .chart-filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; align-items: center; }
-            .chart-filters .filter-group { display: flex; align-items: center; gap: 10px; }
-            .chart-filters .filter-group strong { font-size: 14px; margin-right: 5px; }
-            .chart-filters .btn-filter { padding: 6px 12px; font-size: 14px; border: 1px solid #dee2e6; background-color: #fff; border-radius: 20px; text-decoration: none; color: #495057; transition: all 0.2s; }
-            .chart-filters .btn-filter:hover { background-color: #e9ecef; }
-            .chart-filters .btn-filter.active { background-color: #2196F3; color: #fff; border-color: #2196F3; font-weight: bold; }
-            .work-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; }
+            .chart-separator {
+                border: 0;
+                height: 1px;
+                background-color: #e9ecef;
+                margin: 40px 0;
+            }
         </style>
     </th:block>
 </head>
 <th:block layout:fragment="content">
     <main class="main-content">
         <section class="content-section">
-            <h2>인기 작품 차트</h2>
-
-            <div class="chart-filters">
-                <div class="filter-group">
-                    <strong>타입:</strong>
-                    <a th:href="@{/chart(type='All', sortBy=${selectedSortBy})}"
-                       th:classappend="${selectedType == 'All'} ? 'active'" class="btn-filter">전체</a>
-                    <a th:each="workType : ${workTypes}"
-                       th:href="@{/chart(type=${workType}, sortBy=${selectedSortBy})}"
-                       th:text="${workType}"
-                       th:classappend="${selectedType == workType} ? 'active'"
-                       class="btn-filter"></a>
-                </div>
-                <div class="filter-group">
-                    <strong>정렬:</strong>
-                    <a th:href="@{/chart(type=${selectedType}, sortBy='rating')}"
-                       th:classappend="${selectedSortBy == 'rating'} ? 'active'" class="btn-filter">평점순</a>
-                    <a th:href="@{/chart(type=${selectedType}, sortBy='newest')}"
-                       th:classappend="${selectedSortBy == 'newest'} ? 'active'" class="btn-filter">최신순</a>
-                </div>
-            </div>
-
-            <div th:if="${#lists.isEmpty(works)}">
-                <p>표시할 작품이 없습니다.</p>
-            </div>
-
-            <div class="work-grid" th:unless="${#lists.isEmpty(works)}">
-                <div class="work-card" th:each="work : ${works}">
+            <h2>종합 인기 TOP 10 (시청순)</h2>
+            <div th:if="${#lists.isEmpty(overallByWatchCount)}"><p>표시할 작품이 없습니다.</p></div>
+            <div class="work-list" th:unless="${#lists.isEmpty(overallByWatchCount)}">
+                <div class="work-card" th:each="work : ${overallByWatchCount}">
                     <a th:href="@{'/work/' + ${work.id}}">
                         <img th:src="${work.thumbnailUrl != null ? work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
                         <div class="work-info">
-                            <h3 th:text="${work.titleKr}">작품 제목</h3>
-                            <p th:text="${work.type}">작품 타입</p>
+                            <h3 th:text="${work.titleKr}"></h3><p th:text="${work.type}"></p>
                         </div>
                     </a>
                 </div>
+            </div>
+        </section>
+
+        <section class="content-section">
+            <h2>최신 등록 작품</h2>
+            <div th:if="${#lists.isEmpty(recentWorks)}"><p>표시할 작품이 없습니다.</p></div>
+            <div class="work-list" th:unless="${#lists.isEmpty(recentWorks)}">
+                <div class="work-card" th:each="work : ${recentWorks}">
+                    <a th:href="@{'/work/' + ${work.id}}">
+                        <img th:src="${work.thumbnailUrl != null ? work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
+                        <div class="work-info">
+                            <h3 th:text="${work.titleKr}"></h3><p th:text="${work.type}"></p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <hr class="chart-separator">
+
+        <section class="content-section">
+            <h2>영화 인기 차트 (평점순)</h2>
+            <div th:if="${#lists.isEmpty(moviesByRating)}"><p>표시할 작품이 없습니다.</p></div>
+            <div class="work-list" th:unless="${#lists.isEmpty(moviesByRating)}">
+                <div class="work-card" th:each="work : ${moviesByRating}"><a th:href="@{'/work/' + ${work.id}}"><img th:src="${work.thumbnailUrl}"/><div class="work-info"><h3 th:text="${work.titleKr}"></h3><p th:text="${work.type}"></p></div></a></div>
+            </div>
+        </section>
+        <section class="content-section">
+            <h2>영화 인기 차트 (시청순)</h2>
+            <div th:if="${#lists.isEmpty(moviesByWatchCount)}"><p>표시할 작품이 없습니다.</p></div>
+            <div class="work-list" th:unless="${#lists.isEmpty(moviesByWatchCount)}">
+                <div class="work-card" th:each="work : ${moviesByWatchCount}"><a th:href="@{'/work/' + ${work.id}}"><img th:src="${work.thumbnailUrl}"/><div class="work-info"><h3 th:text="${work.titleKr}"></h3><p th:text="${work.type}"></p></div></a></div>
+            </div>
+        </section>
+
+        <hr class="chart-separator">
+
+        <section class="content-section">
+            <h2>TV 시리즈 인기 차트 (평점순)</h2>
+            <div th:if="${#lists.isEmpty(tvsByRating)}"><p>표시할 작품이 없습니다.</p></div>
+            <div class="work-list" th:unless="${#lists.isEmpty(tvsByRating)}">
+                <div class="work-card" th:each="work : ${tvsByRating}"><a th:href="@{'/work/' + ${work.id}}"><img th:src="${work.thumbnailUrl}"/><div class="work-info"><h3 th:text="${work.titleKr}"></h3><p th:text="${work.type}"></p></div></a></div>
+            </div>
+        </section>
+        <section class="content-section">
+            <h2>TV 시리즈 인기 차트 (시청순)</h2>
+            <div th:if="${#lists.isEmpty(tvsByWatchCount)}"><p>표시할 작품이 없습니다.</p></div>
+            <div class="work-list" th:unless="${#lists.isEmpty(tvsByWatchCount)}">
+                <div class="work-card" th:each="work : ${tvsByWatchCount}"><a th:href="@{'/work/' + ${work.id}}"><img th:src="${work.thumbnailUrl}"/><div class="work-info"><h3 th:text="${work.titleKr}"></h3><p th:text="${work.type}"></p></div></a></div>
+            </div>
+        </section>
+
+        <hr class="chart-separator">
+
+        <section class="content-section">
+            <h2>애니메이션 인기 차트 (평점순)</h2>
+            <div th:if="${#lists.isEmpty(animationsByRating)}"><p>표시할 작품이 없습니다.</p></div>
+            <div class="work-list" th:unless="${#lists.isEmpty(animationsByRating)}">
+                <div class="work-card" th:each="work : ${animationsByRating}"><a th:href="@{'/work/' + ${work.id}}"><img th:src="${work.thumbnailUrl}"/><div class="work-info"><h3 th:text="${work.titleKr}"></h3><p th:text="${work.type}"></p></div></a></div>
+            </div>
+        </section>
+        <section class="content-section">
+            <h2>애니메이션 인기 차트 (시청순)</h2>
+            <div th:if="${#lists.isEmpty(animationsByWatchCount)}"><p>표시할 작품이 없습니다.</p></div>
+            <div class="work-list" th:unless="${#lists.isEmpty(animationsByWatchCount)}">
+                <div class="work-card" th:each="work : ${animationsByWatchCount}"><a th:href="@{'/work/' + ${work.id}}"><img th:src="${work.thumbnailUrl}"/><div class="work-info"><h3 th:text="${work.titleKr}"></h3><p th:text="${work.type}"></p></div></a></div>
             </div>
         </section>
     </main>
