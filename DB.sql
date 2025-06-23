@@ -70,6 +70,7 @@ CREATE TABLE `work`
     `isCompleted`      TINYINT(1) UNSIGNED DEFAULT 0,
     `description`      TEXT,
     `thumbnailUrl`     VARCHAR(255),
+    `trailerUrl`       VARCHAR(255),
     FOREIGN KEY (`seriesId`) REFERENCES `series` (`id`) ON DELETE CASCADE
 );
 
