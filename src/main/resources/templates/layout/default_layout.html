@@ -186,6 +186,39 @@
         .work-card .work-info { padding: 10px; }
         .work-card h3 { font-size: 15px; margin: 0 0 5px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .work-card p { font-size: 13px; color: #666; margin: 0; }
+
+        /* ===== 누락되었던 상세 페이지용 스타일 복구 ===== */
+        .detail-section { max-width: 800px; margin: 0 auto; }
+        .detail-container { display: block; } /* 기본값은 수직 정렬 */
+        .detail-poster-wrapper { text-align: center; margin-bottom: 25px; }
+        .detail-poster-wrapper img { max-width: 100%; width: 350px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .detail-info { text-align: center; }
+        .detail-title-wrapper { margin-bottom: 20px; padding-bottom: 20px; }
+        .detail-title-wrapper h1 { margin-bottom: 5px; font-size: 2.2em; }
+        .detail-title-wrapper .title-original { font-size: 1.1em; color: #888; }
+        .detail-meta-list { list-style: none; padding: 20px; margin: 25px 0; border: 1px solid #e0e0e0; border-radius: 8px; }
+        .detail-meta-list li { margin-bottom: 12px; font-size: 16px; display: flex; }
+        .detail-meta-list li:last-child { margin-bottom: 0; }
+        .detail-meta-list strong { flex-shrink: 0; width: 100px; color: #555; text-align: left;}
+        .detail-separator { height: 1px; background-color: #e0e0e0; margin: 30px 0; }
+        .detail-description { font-size: 16px; line-height: 1.8; color: #333; white-space: pre-wrap; text-align: left; }
+        .action-buttons-wrapper { text-align: center; margin-top: 30px; }
+        .action-buttons { display: flex; gap: 15px; justify-content: center; }
+        .action-buttons .btn { display: flex; align-items: center; gap: 8px; padding: 10px 20px; border: 1px solid #ccc; border-radius: 25px; text-decoration: none; font-weight: bold; cursor: pointer; font-size: 16px; transition: background-color 0.2s; }
+        .action-buttons .btn svg { width: 20px; height: 20px; }
+        .btn-wishlist, .btn-rate, .btn-watch, .btn-watch-cancel { background-color: #fff; color: #333; border-color: #ccc; }
+        .btn-wishlist:hover, .btn-rate:hover, .btn-watch:hover, .btn-watch-cancel:hover { background-color: #f5f5f5; }
+        @media (min-width: 768px) {
+            .detail-container { display: flex; gap: 30px; text-align: left; }
+            .detail-poster-wrapper { text-align: left; margin-bottom: 0; flex-shrink: 0; }
+            .detail-poster-wrapper img { width: 300px; }
+            .detail-info { flex-grow: 1; text-align: left; }
+            .detail-title-wrapper { text-align: left; }
+            .action-buttons { justify-content: flex-start; }
+        }
+        /* ============================================== */
+
+        /* 반응형 헤더를 위한 미디어 쿼리 */
         @media (max-width: 680px) {
             .user-info-header, .login-prompt-header { display: none; }
             .logo-desktop { display: none; }
@@ -262,17 +295,15 @@
         <li class="has-submenu">
             <a href="javascript:void(0);" id="workListToggle">작품 목록</a>
             <ul class="submenu">
-                <li><a th:href="@{/works(type='Movie')}">영화</a></li>
-                <li><a href="#">드라마</a></li>
-                <li><a href="#">애니메이션</a></li>
-                <li><a th:href="@{/works(type='TV')}">TV 시리즈</a></li>
+                <li><a href="#">영화</a></li>
+                <li><a href="#">TV 시리즈</a></li>
                 <li><a href="#">TV 단편</a></li>
+                <li><a href="#">애니메이션</a></li>
                 <li><a href="#">만화</a></li>
                 <li><a href="#">단편 만화</a></li>
                 <li><a href="#">소설</a></li>
             </ul>
         </li>
-        <li><a th:href="@{/chart}">인기차트</a></li>
         <li><a href="#">게시판</a></li>
     </ul>
     <div class="side-menu-bottom">

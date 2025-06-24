@@ -1,12 +1,9 @@
 -- 데이터베이스가 존재하면 삭제 (모든 데이터 파괴)
 DROP
 DATABASE IF EXISTS `ltk-spring-project`;
-
--- 데이터베이스 생성
 CREATE
 DATABASE `ltk-spring-project`;
 
--- 생성한 데이터베이스 사용
 USE
 `ltk-spring-project`;
 
@@ -30,7 +27,6 @@ CREATE TABLE `member`
     `delStatus`    TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
     `delDate`      DATETIME
 );
-
 CREATE TABLE `series`
 (
     `id`            BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -41,9 +37,10 @@ CREATE TABLE `series`
     `description`   TEXT,
     `thumbnailUrl`  VARCHAR(255),
     `coverImageUrl` VARCHAR(255),
-    `author`        VARCHAR(100)
+    `author`        VARCHAR(100),
+    `publisher`     VARCHAR(100),
+    `studios`       VARCHAR(255)
 );
-
 CREATE TABLE `board`
 (
     `id`         BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -57,14 +54,22 @@ CREATE TABLE `board`
 
 CREATE TABLE `work`
 (
-    `id`               BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `seriesId`         BIGINT       NOT NULL,
-    `regDate`          DATETIME     NOT NULL,
-    `updateDate`       DATETIME     NOT NULL,
-    `titleKr`          VARCHAR(255) NOT NULL,
+    `id`               BIGINT        NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `seriesId`         BIGINT        NOT NULL,
+    `regDate`          DATETIME      NOT NULL,
+    `updateDate`       DATETIME      NOT NULL,
+    `titleKr`          VARCHAR(255)  NOT NULL,
     `titleOriginal`    VARCHAR(255),
-    `type`             VARCHAR(50)  NOT NULL,
+    `type`             VARCHAR(50)   NOT NULL,
+    `isOriginal`       BOOLEAN       NOT NULL DEFAULT FALSE,
     `releaseDate`      DATE,
+    `watchedCount`     INT UNSIGNED NOT NULL DEFAULT 0,
+    `averageRating`    DECIMAL(4, 2) NOT NULL DEFAULT 0.00,
+    `ratingCount`      INT UNSIGNED NOT NULL DEFAULT 0,
+    `episodes`         INT UNSIGNED,
+    `duration`         INT UNSIGNED COMMENT '회당 분량 (분 단위)',
+    `creators`         VARCHAR(255),
+    `studios`          VARCHAR(255),
     `releaseSequence`  INT UNSIGNED,
     `timelineSequence` INT UNSIGNED,
     `isCompleted`      TINYINT(1) UNSIGNED DEFAULT 0,
@@ -80,29 +85,15 @@ CREATE TABLE `article`
     `regDate`           DATETIME     NOT NULL,
     `updateDate`        DATETIME     NOT NULL,
     `memberId`          BIGINT       NOT NULL,
-    `seriesId`          BIGINT       NOT NULL,
+    `workId`            BIGINT       NOT NULL,
     `title`             VARCHAR(255) NOT NULL,
     `body`              TEXT         NOT NULL,
     `hitCount`          INT UNSIGNED NOT NULL DEFAULT 0,
     `goodReactionPoint` INT UNSIGNED NOT NULL DEFAULT 0,
     `badReactionPoint`  INT UNSIGNED NOT NULL DEFAULT 0,
     FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`seriesId`) REFERENCES `series` (`id`) ON DELETE CASCADE
+    FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE
 );
-
-CREATE TABLE `reactionPoint`
-(
-    `id`           BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `regDate`      DATETIME NOT NULL,
-    `updateDate`   DATETIME NOT NULL,
-    `memberId`     BIGINT   NOT NULL,
-    `relTypeCode`  CHAR(50) NOT NULL,
-    `relId`        BIGINT   NOT NULL,
-    `reactionType` CHAR(10) NOT NULL,
-    `point`        INT      NOT NULL,
-    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE
-);
-
 CREATE TABLE `reply`
 (
     `id`                BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -119,7 +110,18 @@ CREATE TABLE `reply`
     FOREIGN KEY (`relId`) REFERENCES `article` (`id`) ON DELETE CASCADE,
     FOREIGN KEY (`parentId`) REFERENCES `reply` (`id`) ON DELETE CASCADE
 );
-
+CREATE TABLE `reactionPoint`
+(
+    `id`           BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`      DATETIME NOT NULL,
+    `updateDate`   DATETIME NOT NULL,
+    `memberId`     BIGINT   NOT NULL,
+    `relTypeCode`  CHAR(50) NOT NULL,
+    `relId`        BIGINT   NOT NULL,
+    `reactionType` CHAR(10) NOT NULL,
+    `point`        INT      NOT NULL,
+    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE
+);
 CREATE TABLE `conpro`
 (
     `id`             BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -131,7 +133,6 @@ CREATE TABLE `conpro`
     `additionalInfo` TEXT,
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE
 );
-
 CREATE TABLE `memberWishlistWork`
 (
     `id`       BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -142,7 +143,6 @@ CREATE TABLE `memberWishlistWork`
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     UNIQUE KEY (`memberId`, `workId`)
 );
-
 CREATE TABLE `memberWatchedWork`
 (
     `id`          BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -155,7 +155,6 @@ CREATE TABLE `memberWatchedWork`
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     UNIQUE KEY (`memberId`, `workId`)
 );
-
 CREATE TABLE `memberWorkRating`
 (
     `id`         BIGINT        NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -169,7 +168,6 @@ CREATE TABLE `memberWorkRating`
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     UNIQUE KEY (`memberId`, `workId`)
 );
-
 CREATE TABLE `memberWishlistSeries`
 (
     `id`       BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -180,7 +178,6 @@ CREATE TABLE `memberWishlistSeries`
     FOREIGN KEY (`seriesId`) REFERENCES `series` (`id`) ON DELETE CASCADE,
     UNIQUE KEY (`memberId`, `seriesId`)
 );
-
 CREATE TABLE `work_identifier`
 (
     `id`         BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -192,7 +189,6 @@ CREATE TABLE `work_identifier`
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     UNIQUE KEY `UK_source` (`sourceName`, `sourceId`)
 );
-
 CREATE TABLE `genre`
 (
     `id`         BIGINT      NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -200,7 +196,6 @@ CREATE TABLE `genre`
     `updateDate` DATETIME    NOT NULL,
     `name`       VARCHAR(50) NOT NULL UNIQUE
 );
-
 CREATE TABLE `work_genre`
 (
     `id`      BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -210,4 +205,26 @@ CREATE TABLE `work_genre`
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     FOREIGN KEY (`genreId`) REFERENCES `genre` (`id`) ON DELETE CASCADE,
     UNIQUE KEY `UK_workId_genreId` (`workId`, `genreId`)
+);
+
+CREATE TABLE `viewing_guide`
+(
+    `id`               BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`          DATETIME     NOT NULL,
+    `updateDate`       DATETIME     NOT NULL,
+    `seriesId`         BIGINT       NOT NULL,
+    `guideName`        VARCHAR(100) NOT NULL,
+    `guideDescription` TEXT,
+    FOREIGN KEY (`seriesId`) REFERENCES `series` (`id`) ON DELETE CASCADE
+);
+
+CREATE TABLE `viewing_guide_item`
+(
+    `id`              BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `guideId`         BIGINT NOT NULL,
+    `workId`          BIGINT NOT NULL,
+    `stepNumber`      INT UNSIGNED NOT NULL,
+    `stepDescription` TEXT,
+    FOREIGN KEY (`guideId`) REFERENCES `viewing_guide` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE
 );
