@@ -11,8 +11,6 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
 
     List<Work> findBySeriesId(Long seriesId);
 
-    List<Work> findByType(String type);
-
     @Query(value = "SELECT DISTINCT type FROM work ORDER BY type", nativeQuery = true)
     List<String> findDistinctTypes();
 

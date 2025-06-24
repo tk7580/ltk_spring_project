@@ -174,6 +174,9 @@
             font-size: 15px;
             color: #495057;
         }
+        .submenu .menu-separator {
+            margin: 4px 15px;
+        }
         .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1100; }
         .overlay.active { display: block; }
         .main-content { padding: 15px; }
@@ -189,7 +192,7 @@
 
         /* ===== 누락되었던 상세 페이지용 스타일 복구 ===== */
         .detail-section { max-width: 800px; margin: 0 auto; }
-        .detail-container { display: block; } /* 기본값은 수직 정렬 */
+        .detail-container { display: block; }
         .detail-poster-wrapper { text-align: center; margin-bottom: 25px; }
         .detail-poster-wrapper img { max-width: 100%; width: 350px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         .detail-info { text-align: center; }
@@ -218,7 +221,6 @@
         }
         /* ============================================== */
 
-        /* 반응형 헤더를 위한 미디어 쿼리 */
         @media (max-width: 680px) {
             .user-info-header, .login-prompt-header { display: none; }
             .logo-desktop { display: none; }
@@ -295,15 +297,19 @@
         <li class="has-submenu">
             <a href="javascript:void(0);" id="workListToggle">작품 목록</a>
             <ul class="submenu">
-                <li><a href="#">영화</a></li>
-                <li><a href="#">TV 시리즈</a></li>
-                <li><a href="#">TV 단편</a></li>
+                <li><a th:href="@{/works(type='All')}">전체</a></li>
+                <li class="menu-separator"></li>
+                <li><a th:href="@{/works(type='Movie')}">영화</a></li>
+                <li><a href="#">드라마</a></li>
                 <li><a href="#">애니메이션</a></li>
+                <li><a th:href="@{/works(type='TV')}">TV 시리즈</a></li>
+                <li><a href="#">TV 단편</a></li>
                 <li><a href="#">만화</a></li>
                 <li><a href="#">단편 만화</a></li>
                 <li><a href="#">소설</a></li>
             </ul>
         </li>
+        <li><a th:href="@{/chart}">인기차트</a></li>
         <li><a href="#">게시판</a></li>
     </ul>
     <div class="side-menu-bottom">
