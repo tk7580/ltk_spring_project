@@ -6,8 +6,9 @@ from mysql.connector import Error
 from dotenv import load_dotenv
 import time
 
+# --- DB Helper Functions ---
+
 def find_work_by_external_id(cursor, source_name, source_id):
-    """외부 ID로 우리 DB에 저장된 work의 고유 ID(PK)를 찾습니다."""
     query = "SELECT workId FROM work_identifier WHERE sourceName = %s AND sourceId = %s LIMIT 1"
     try:
         cursor.execute(query, (source_name, str(source_id)))
@@ -18,7 +19,6 @@ def find_work_by_external_id(cursor, source_name, source_id):
         return None
 
 def get_or_create_genre_ids(cursor, connection, genre_names):
-    """장르 이름 목록을 받아 DB에 없으면 저장하고, 모든 장르의 ID 목록을 반환합니다."""
     genre_ids = []
     select_query = "SELECT id FROM genre WHERE name = %s"
     insert_query = "INSERT INTO genre (name, regDate, updateDate) VALUES (%s, NOW(), NOW())"
@@ -36,51 +36,40 @@ def get_or_create_genre_ids(cursor, connection, genre_names):
     return genre_ids
 
 def link_genres_to_work(cursor, connection, work_id, genre_ids):
-    """작품 ID와 장르 ID 목록을 받아 work_genre 테이블에 저장합니다."""
     delete_query = "DELETE FROM work_genre WHERE workId = %s"
     insert_query = "INSERT INTO work_genre (workId, genreId, regDate) VALUES (%s, %s, NOW()) ON DUPLICATE KEY UPDATE workId=workId"
     try:
         cursor.execute(delete_query, (work_id,))
-        for genre_id in genre_ids:
-            cursor.execute(insert_query, (work_id, genre_id))
+        if genre_ids:
+            data_to_insert = [(work_id, genre_id) for genre_id in genre_ids]
+            cursor.executemany(insert_query, data_to_insert)
         connection.commit()
     except Error as e:
         print(f"  [오류] 작품-장르 연결 중 DB 에러: {e}")
         connection.rollback()
 
-def find_or_create_series(cursor, connection, item_data, media_type):
-    """작품 데이터(영화/TV)를 받아, 적절한 시리즈를 찾거나 생성하고 seriesId를 반환합니다."""
-    if media_type == 'tv':
-        series_data = (item_data.get('titleKr'), item_data.get('titleOriginal'), item_data.get('description'), item_data.get('thumbnailUrl'), item_data.get('coverImageUrl'), item_data.get('author'))
-        insert_query = "INSERT INTO series (titleKr, titleOriginal, description, thumbnailUrl, coverImageUrl, author, regDate, updateDate) VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())"
+def find_or_create_series(cursor, connection, item_data):
+    collection_info = item_data.get('collection')
+    if collection_info and collection_info.get('name'):
+        collection_name = collection_info['name']
+        cursor.execute("SELECT id FROM series WHERE titleKr = %s LIMIT 1", (collection_name,))
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        else:
+            series_data = (collection_name, collection_name, None, f"https://image.tmdb.org/t/p/w500{collection_info.get('poster_path')}" if collection_info.get('poster_path') else None, f"https://image.tmdb.org/t/p/w1280{collection_info.get('backdrop_path')}" if collection_info.get('backdrop_path') else None, item_data.get('author'), item_data.get('studios'), item_data.get('publisher'))
+            insert_query = "INSERT INTO series (titleKr, titleOriginal, description, thumbnailUrl, coverImageUrl, author, studios, publisher, regDate, updateDate) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())"
+            cursor.execute(insert_query, series_data)
+            return cursor.lastrowid
+    else:
+        series_data = (item_data.get('titleKr'), item_data.get('titleOriginal'), item_data.get('description'), item_data.get('thumbnailUrl'), item_data.get('coverImageUrl'), item_data.get('author'), item_data.get('studios'), item_data.get('publisher'))
+        insert_query = "INSERT INTO series (titleKr, titleOriginal, description, thumbnailUrl, coverImageUrl, author, studios, publisher, regDate, updateDate) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())"
         cursor.execute(insert_query, series_data)
         return cursor.lastrowid
 
-    elif media_type == 'movie':
-        collection_info = item_data.get('collection')
-        if collection_info and collection_info.get('name'):
-            collection_name = collection_info['name']
-            cursor.execute("SELECT id FROM series WHERE titleKr = %s LIMIT 1", (collection_name,))
-            result = cursor.fetchone()
-            if result:
-                return result[0]
-            else:
-                collection_poster = f"https://image.tmdb.org/t/p/w500{collection_info.get('poster_path')}" if collection_info.get('poster_path') else None
-                collection_backdrop = f"https://image.tmdb.org/t/p/w1280{collection_info.get('backdrop_path')}" if collection_info.get('backdrop_path') else None
-                series_data = (collection_name, collection_name, None, collection_poster, collection_backdrop, None)
-                insert_query = "INSERT INTO series (titleKr, titleOriginal, description, thumbnailUrl, coverImageUrl, author, regDate, updateDate) VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())"
-                cursor.execute(insert_query, series_data)
-                return cursor.lastrowid
-        else:
-            series_data = (item_data.get('titleKr'), item_data.get('titleOriginal'), item_data.get('description'), item_data.get('thumbnailUrl'), item_data.get('coverImageUrl'), item_data.get('author'))
-            insert_query = "INSERT INTO series (titleKr, titleOriginal, description, thumbnailUrl, coverImageUrl, author, regDate, updateDate) VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())"
-            cursor.execute(insert_query, series_data)
-            return cursor.lastrowid
-
-    return None
+# --- TMDB API Helper Functions ---
 
 def get_api_data(url):
-    """주어진 URL로 API를 요청하고 JSON 결과를 반환합니다."""
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -90,14 +79,10 @@ def get_api_data(url):
         return None
 
 def get_trailer_key(media_type, tmdb_id, api_key):
-    """작품의 YouTube 예고편 키를 가져옵니다."""
     url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}/videos?api_key={api_key}"
     video_data = get_api_data(url)
-    if not video_data or not video_data.get('results'):
-        return None
-
+    if not video_data or not video_data.get('results'): return None
     for video in video_data['results']:
-        # 공식(Official) 예고편(Trailer)을 우선적으로 찾습니다. 없으면 아무 예고편이나 가져옵니다.
         if video.get('site') == 'YouTube' and video.get('official') and video.get('type') == 'Trailer':
             return video.get('key')
     for video in video_data['results']:
@@ -105,87 +90,83 @@ def get_trailer_key(media_type, tmdb_id, api_key):
             return video.get('key')
     return None
 
-def get_creator_info(media_type, tmdb_id, api_key):
-    """영화 감독 또는 TV 제작자 정보를 가져옵니다."""
+def get_credits_and_companies(media_type, tmdb_id, api_key):
     url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}/credits?api_key={api_key}"
     credits_data = get_api_data(url)
-    if not credits_data:
-        return None
+    detail_url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}?api_key={api_key}"
+    detail_data = get_api_data(detail_url)
+
+    creator = None
+    studios = None
 
     if media_type == 'movie':
-        for member in credits_data.get('crew', []):
-            if member.get('job') == 'Director':
-                return member.get('name')
+        if credits_data:
+            for member in credits_data.get('crew', []):
+                if member.get('job') == 'Director':
+                    creator = member.get('name')
+                    break
     elif media_type == 'tv':
-        creators = credits_data.get('created_by', [])
-        if creators:
-            return ", ".join([creator['name'] for creator in creators])
-    return None
+        if detail_data and detail_data.get('created_by'):
+            creator = ", ".join([p['name'] for p in detail_data['created_by']])
 
-def normalize_item_data(item_detail, media_type, creator_name, trailer_key):
-    """Movie와 TV API의 다른 필드명을 공통 형식으로 정규화합니다."""
+    if detail_data and detail_data.get('production_companies'):
+        studios = ", ".join([c['name'] for c in detail_data['production_companies']])
+
+    return creator, studios
+
+def normalize_tmdb_data(item_detail, media_type, creator, studios, trailer_key):
     base_data = {
         'id': item_detail.get('id'),
         'description': item_detail.get('overview'),
         'thumbnailUrl': f"https://image.tmdb.org/t/p/w500{item_detail.get('poster_path')}" if item_detail.get('poster_path') else None,
         'coverImageUrl': f"https://image.tmdb.org/t/p/w1280{item_detail.get('backdrop_path')}" if item_detail.get('backdrop_path') else None,
         'genres': [genre['name'] for genre in item_detail.get('genres', [])],
-        'author': creator_name,
+        'author': creator, # 영화감독 또는 TV 제작자
+        'studios': studios,
         'collection': item_detail.get('belongs_to_collection'),
         'trailerUrl': f"https://www.youtube.com/watch?v={trailer_key}" if trailer_key else None
     }
     if media_type == 'movie':
-        base_data.update({'titleKr': item_detail.get('title'), 'titleOriginal': item_detail.get('original_title'), 'releaseDate': item_detail.get('release_date'), 'type': 'Movie', 'isCompleted': True})
+        base_data.update({'titleKr': item_detail.get('title'), 'titleOriginal': item_detail.get('original_title'), 'releaseDate': item_detail.get('release_date'), 'type': 'Movie', 'isCompleted': True, 'episodes': 1, 'duration': item_detail.get('runtime')})
     elif media_type == 'tv':
-        base_data.update({'titleKr': item_detail.get('name'), 'titleOriginal': item_detail.get('original_name'), 'releaseDate': item_detail.get('first_air_date'), 'type': 'TV', 'isCompleted': item_detail.get('status') == 'Ended'})
+        base_data.update({'titleKr': item_detail.get('name'), 'titleOriginal': item_detail.get('original_name'), 'releaseDate': item_detail.get('first_air_date'), 'type': 'TV', 'isCompleted': item_detail.get('status') == 'Ended', 'episodes': item_detail.get('number_of_episodes'), 'duration': item_detail.get('episode_run_time')[0] if item_detail.get('episode_run_time') else None})
     return base_data
 
-def process_item(cursor, connection, item_summary, media_type, api_key):
-    """하나의 아이템(영화/TV)을 가져와 DB에 저장 또는 업데이트합니다."""
+# ===== Main DB Upsert Function =====
+
+def upsert_item(cursor, connection, item_summary, media_type, api_key):
     source_name = f"TMDB_{media_type.upper()}"
     tmdb_id = item_summary.get('id')
-    if not tmdb_id:
-        print("  [경고] TMDB ID가 없는 데이터는 건너뜁니다.")
-        return None, None
-
-    existing_work_id = find_work_by_external_id(cursor, source_name, tmdb_id)
+    if not tmdb_id: return None
 
     detail_url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}?api_key={api_key}&language=ko-KR"
     detail_data = get_api_data(detail_url)
-    if not detail_data:
-        return None, None
+    if not detail_data: return None
 
-    creator_name = get_creator_info(media_type, tmdb_id, api_key)
+    creator, studios = get_credits_and_companies(media_type, tmdb_id, api_key)
     trailer_key = get_trailer_key(media_type, tmdb_id, api_key)
-    normalized_data = normalize_item_data(detail_data, media_type, creator_name, trailer_key)
+    normalized_data = normalize_tmdb_data(detail_data, media_type, creator, studios, trailer_key)
 
     print("-" * 40)
 
-    work_id = None
-    operation_type = None
+    work_id = find_work_by_external_id(cursor, source_name, tmdb_id)
 
-    if existing_work_id:
-        work_id = existing_work_id
-        cursor.execute("UPDATE work SET titleKr=%s, titleOriginal=%s, releaseDate=%s, description=%s, thumbnailUrl=%s, isCompleted=%s, trailerUrl=%s, updateDate=NOW() WHERE id=%s",
-                       (normalized_data['titleKr'], normalized_data['titleOriginal'], normalized_data.get('releaseDate') or None, normalized_data['description'], normalized_data['thumbnailUrl'], normalized_data['isCompleted'], normalized_data['trailerUrl'], work_id))
-        cursor.execute("SELECT seriesId FROM work WHERE id = %s", (work_id,))
-        series_id = cursor.fetchone()[0]
-        cursor.execute("UPDATE series SET author=%s, coverImageUrl=%s, updateDate=NOW() WHERE id=%s",
-                       (normalized_data['author'], normalized_data['coverImageUrl'], series_id))
+    if work_id:
+        # UPDATE
+        update_work_query = "UPDATE work SET titleKr=%s, titleOriginal=%s, releaseDate=%s, description=%s, thumbnailUrl=%s, trailerUrl=%s, isCompleted=%s, episodes=%s, duration=%s, creators=%s, studios=%s, updateDate=NOW() WHERE id=%s"
+        cursor.execute(update_work_query, (normalized_data['titleKr'], normalized_data['titleOriginal'], normalized_data.get('releaseDate') or None, normalized_data['description'], normalized_data['thumbnailUrl'], normalized_data['trailerUrl'], normalized_data['isCompleted'], normalized_data['episodes'], normalized_data['duration'], normalized_data['author'], normalized_data['studios'], work_id))
         print(f"  [업데이트] '{normalized_data.get('titleKr')}' (workId: {work_id}) -> 정보 업데이트 완료")
         operation_type = "update"
     else:
-        series_id = find_or_create_series(cursor, connection, normalized_data, media_type)
-        print(f"  [시리즈 처리] '{normalized_data['titleKr']}' -> seriesId: {series_id}에 소속")
+        # INSERT
+        series_id = find_or_create_series(cursor, connection, normalized_data)
 
-        cursor.execute("INSERT INTO work (seriesId, titleKr, titleOriginal, type, releaseDate, description, thumbnailUrl, trailerUrl, isCompleted, regDate, updateDate) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())",
-                       (series_id, normalized_data['titleKr'], normalized_data['titleOriginal'], normalized_data['type'], normalized_data.get('releaseDate') or None, normalized_data['description'], normalized_data['thumbnailUrl'], normalized_data['trailerUrl'], normalized_data['isCompleted']))
+        insert_work_query = "INSERT INTO work (seriesId, titleKr, titleOriginal, type, releaseDate, description, thumbnailUrl, trailerUrl, isCompleted, episodes, duration, creators, studios, regDate, updateDate) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())"
+        cursor.execute(insert_work_query, (series_id, normalized_data['titleKr'], normalized_data['titleOriginal'], normalized_data['type'], normalized_data.get('releaseDate') or None, normalized_data['description'], normalized_data['thumbnailUrl'], normalized_data['trailerUrl'], normalized_data['isCompleted'], normalized_data['episodes'], normalized_data['duration'], normalized_data['author'], normalized_data['studios']))
         work_id = cursor.lastrowid
-        print(f"  [신규 저장] '{normalized_data['titleKr']}' -> work 저장 완료 (workId: {work_id})")
 
-        cursor.execute("INSERT INTO work_identifier (workId, sourceName, sourceId, regDate, updateDate) VALUES (%s, %s, %s, NOW(), NOW())",
-                       (work_id, source_name, str(tmdb_id)))
-        print(f"  [매핑] workId {work_id}와 {source_name} ID {tmdb_id} 매핑 완료")
+        cursor.execute("INSERT INTO work_identifier (workId, sourceName, sourceId, regDate, updateDate) VALUES (%s, %s, %s, NOW(), NOW())", (work_id, source_name, str(tmdb_id)))
+        print(f"  [신규 저장] '{normalized_data.get('titleKr')}' -> work, series, identifier 저장 완료")
         operation_type = "save"
 
     genre_names = normalized_data.get('genres', [])
@@ -195,30 +176,22 @@ def process_item(cursor, connection, item_summary, media_type, api_key):
         print(f"    - 장르 정보 {len(genre_ids)}건 처리 완료")
 
     connection.commit()
-    return operation_type, work_id
+    return operation_type
 
 def main():
     load_dotenv()
     api_key = os.getenv('TMDB_API_KEY')
-    db_host = os.getenv('DB_HOST')
-    db_user = os.getenv('DB_USER')
-    db_password = os.getenv('DB_PASSWORD')
-    db_database = os.getenv('DB_DATABASE')
-
-    if not all([api_key, db_host, db_user, db_password, db_database]):
-        print("에러: .env 파일에 필요한 모든 정보(API키, DB접속정보)를 설정해주세요.")
-        return
+    db_host = os.getenv('DB_HOST'); db_user = os.getenv('DB_USER'); db_password = os.getenv('DB_PASSWORD'); db_database = os.getenv('DB_DATABASE')
 
     connection = None
     try:
-        connection = mysql.connector.connect( host=db_host, user=db_user, password=db_password, database=db_database, port=3306 )
+        connection = mysql.connector.connect(host=db_host, user=db_user, password=db_password, database=db_database, port=3306)
         cursor = connection.cursor()
         print("데이터베이스에 성공적으로 연결되었습니다.")
 
         endpoints_to_fetch = ['popular', 'top_rated']
         pages_to_fetch = 3
-        total_saved = 0
-        total_updated = 0
+        total_saved = 0; total_updated = 0
 
         for media_type in ['movie', 'tv']:
             for endpoint in endpoints_to_fetch:
@@ -227,30 +200,20 @@ def main():
                     print(f"\n===== '{media_type.upper()}' / '{endpoint}' 데이터 처리 시작 (페이지: {page}) =====")
 
                     list_data = get_api_data(list_url)
-                    if not list_data or not list_data.get('results'):
-                        print(f"  [정보] 목록을 가져올 수 없습니다. 다음으로 넘어갑니다.")
-                        continue
+                    if not list_data or not list_data.get('results'): continue
 
-                    print(f"  > {len(list_data['results'])}개 항목 처리 시작...")
                     for item_summary in list_data['results']:
-                        result_type, _ = process_item(cursor, connection, item_summary, media_type, api_key)
-                        if result_type == "save":
-                            total_saved += 1
-                        elif result_type == "update":
-                            total_updated += 1
-                        time.sleep(0.2)
+                        result_type = upsert_item(cursor, connection, item_summary, media_type, api_key)
+                        if result_type == "save": total_saved += 1
+                        elif result_type == "update": total_updated += 1
+                        time.sleep(0.1)
 
-        print(f"\n\n===== 전체 처리 완료 =====")
-        print(f"신규 저장: {total_saved}건")
-        print(f"정보 업데이트: {total_updated}건")
-
+        print(f"\n\n===== 전체 처리 완료 ====="); print(f"신규 저장: {total_saved}건"); print(f"정보 업데이트: {total_updated}건")
     except Error as e:
         print(f"데이터베이스 작업 중 에러 발생: {e}")
     finally:
         if connection and connection.is_connected():
-            cursor.close()
-            connection.close()
-            print("\n데이터베이스 연결이 종료되었습니다.")
+            cursor.close(); connection.close(); print("\n데이터베이스 연결이 종료되었습니다.")
 
 if __name__ == "__main__":
     main()
