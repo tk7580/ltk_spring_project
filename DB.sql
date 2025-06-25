@@ -3,7 +3,6 @@ DROP
 DATABASE IF EXISTS `ltk-spring-project`;
 CREATE
 DATABASE `ltk-spring-project`;
-
 USE
 `ltk-spring-project`;
 
@@ -27,6 +26,7 @@ CREATE TABLE `member`
     `delStatus`    TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
     `delDate`      DATETIME
 );
+
 CREATE TABLE `series`
 (
     `id`            BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -41,6 +41,7 @@ CREATE TABLE `series`
     `publisher`     VARCHAR(100),
     `studios`       VARCHAR(255)
 );
+
 CREATE TABLE `board`
 (
     `id`         BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -60,7 +61,6 @@ CREATE TABLE `work`
     `updateDate`       DATETIME      NOT NULL,
     `titleKr`          VARCHAR(255)  NOT NULL,
     `titleOriginal`    VARCHAR(255),
-    `type`             VARCHAR(50)   NOT NULL,
     `isOriginal`       BOOLEAN       NOT NULL DEFAULT FALSE,
     `releaseDate`      DATE,
     `watchedCount`     INT UNSIGNED NOT NULL DEFAULT 0,
@@ -79,6 +79,25 @@ CREATE TABLE `work`
     FOREIGN KEY (`seriesId`) REFERENCES `series` (`id`) ON DELETE CASCADE
 );
 
+CREATE TABLE `work_type`
+(
+    `id`         BIGINT      NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`    DATETIME    NOT NULL,
+    `updateDate` DATETIME    NOT NULL,
+    `name`       VARCHAR(50) NOT NULL UNIQUE COMMENT '타입명 (예: Movie, Animation)'
+);
+
+CREATE TABLE `work_type_mapping`
+(
+    `id`      BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate` DATETIME NOT NULL,
+    `workId`  BIGINT   NOT NULL,
+    `typeId`  BIGINT   NOT NULL,
+    FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`typeId`) REFERENCES `work_type` (`id`) ON DELETE CASCADE,
+    UNIQUE KEY `UK_workId_typeId` (`workId`, `typeId`)
+);
+
 CREATE TABLE `article`
 (
     `id`                BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -94,6 +113,7 @@ CREATE TABLE `article`
     FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE
 );
+
 CREATE TABLE `reply`
 (
     `id`                BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -110,6 +130,7 @@ CREATE TABLE `reply`
     FOREIGN KEY (`relId`) REFERENCES `article` (`id`) ON DELETE CASCADE,
     FOREIGN KEY (`parentId`) REFERENCES `reply` (`id`) ON DELETE CASCADE
 );
+
 CREATE TABLE `reactionPoint`
 (
     `id`           BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -122,6 +143,7 @@ CREATE TABLE `reactionPoint`
     `point`        INT      NOT NULL,
     FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE
 );
+
 CREATE TABLE `conpro`
 (
     `id`             BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -133,6 +155,7 @@ CREATE TABLE `conpro`
     `additionalInfo` TEXT,
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE
 );
+
 CREATE TABLE `memberWishlistWork`
 (
     `id`       BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -143,6 +166,7 @@ CREATE TABLE `memberWishlistWork`
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     UNIQUE KEY (`memberId`, `workId`)
 );
+
 CREATE TABLE `memberWatchedWork`
 (
     `id`          BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -155,6 +179,7 @@ CREATE TABLE `memberWatchedWork`
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     UNIQUE KEY (`memberId`, `workId`)
 );
+
 CREATE TABLE `memberWorkRating`
 (
     `id`         BIGINT        NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -168,6 +193,7 @@ CREATE TABLE `memberWorkRating`
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     UNIQUE KEY (`memberId`, `workId`)
 );
+
 CREATE TABLE `memberWishlistSeries`
 (
     `id`       BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -178,6 +204,7 @@ CREATE TABLE `memberWishlistSeries`
     FOREIGN KEY (`seriesId`) REFERENCES `series` (`id`) ON DELETE CASCADE,
     UNIQUE KEY (`memberId`, `seriesId`)
 );
+
 CREATE TABLE `work_identifier`
 (
     `id`         BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -189,6 +216,7 @@ CREATE TABLE `work_identifier`
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     UNIQUE KEY `UK_source` (`sourceName`, `sourceId`)
 );
+
 CREATE TABLE `genre`
 (
     `id`         BIGINT      NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -196,6 +224,7 @@ CREATE TABLE `genre`
     `updateDate` DATETIME    NOT NULL,
     `name`       VARCHAR(50) NOT NULL UNIQUE
 );
+
 CREATE TABLE `work_genre`
 (
     `id`      BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -228,3 +257,25 @@ CREATE TABLE `viewing_guide_item`
     FOREIGN KEY (`guideId`) REFERENCES `viewing_guide` (`id`) ON DELETE CASCADE,
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE
 );
+
+-- work_type 마스터 테이블에 기본 타입 데이터 추가
+INSERT INTO `work_type` (`regDate`, `updateDate`, `name`)
+VALUES (NOW(), NOW(), 'Movie'),
+       (NOW(), NOW(), 'TV Series'),
+       (NOW(), NOW(), 'Animation'),
+       (NOW(), NOW(), 'Drama'),
+       (NOW(), NOW(), 'Live-Action');
+
+INSERT INTO `member`
+(regDate, updateDate, loginId, loginPw, authLevel, `name`, nickname, cellphoneNum, email, delStatus)
+VALUES (NOW(),
+        NOW(),
+        'admin',
+           -- 비밀번호 'admin'을 BCrypt로 암호화한 값입니다.
+        '$2a$10$N.x2nE0r2e.2G5.8iG5.8u7a2L6E2o3W8a6L2G5.8iG5.8u7a2L6E2o',
+        7, -- 권한 레벨 7: 관리자
+        'admin',
+        'admin',
+        'admin',
+        'admin@admin.com',
+        0);
