@@ -24,11 +24,18 @@
           <strong>타입:</strong>
           <a th:href="@{/works(type='All', sortBy=${selectedSortBy})}"
              th:classappend="${selectedType == 'All'} ? 'active'" class="btn-filter">전체</a>
+
           <a th:each="workType : ${workTypes}"
              th:href="@{/works(type=${workType}, sortBy=${selectedSortBy})}"
-             th:text="${workType}"
              th:classappend="${selectedType == workType} ? 'active'"
-             class="btn-filter"></a>
+             class="btn-filter">
+              <span th:switch="${workType}">
+                  <span th:case="'Animation'">애니메이션</span>
+                  <span th:case="'Movie'">영화</span>
+                  <span th:case="'TV'">TV 시리즈</span>
+                  <span th:case="*" th:text="${workType}"></span>
+              </span>
+          </a>
         </div>
         <div class="filter-group">
           <strong>정렬:</strong>
@@ -49,7 +56,14 @@
             <img th:src="${work.thumbnailUrl != null ? work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
             <div class="work-info">
               <h3 th:text="${work.titleKr}">작품 제목</h3>
-              <p th:text="${work.type}">작품 타입</p>
+              <p>
+                <span th:switch="${work.type}">
+                    <span th:case="'Animation'">애니메이션</span>
+                    <span th:case="'Movie'">영화</span>
+                    <span th:case="'TV'">TV 시리즈</span>
+                    <span th:case="*" th:text="${work.type}"></span>
+                </span>
+              </p>
             </div>
           </a>
         </div>

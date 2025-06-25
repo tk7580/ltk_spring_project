@@ -190,7 +190,6 @@
         .work-card h3 { font-size: 15px; margin: 0 0 5px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .work-card p { font-size: 13px; color: #666; margin: 0; }
 
-        /* ===== 누락되었던 상세 페이지용 스타일 복구 ===== */
         .detail-section { max-width: 800px; margin: 0 auto; }
         .detail-container { display: block; }
         .detail-poster-wrapper { text-align: center; margin-bottom: 25px; }
@@ -219,7 +218,6 @@
             .detail-title-wrapper { text-align: left; }
             .action-buttons { justify-content: flex-start; }
         }
-        /* ============================================== */
 
         @media (max-width: 680px) {
             .user-info-header, .login-prompt-header { display: none; }
@@ -301,7 +299,7 @@
                 <li class="menu-separator"></li>
                 <li><a th:href="@{/works(type='Movie')}">영화</a></li>
                 <li><a href="#">드라마</a></li>
-                <li><a href="#">애니메이션</a></li>
+                <li><a th:href="@{/works(type='Animation')}">애니메이션</a></li>
                 <li><a th:href="@{/works(type='TV')}">TV 시리즈</a></li>
                 <li><a href="#">TV 단편</a></li>
                 <li><a href="#">만화</a></li>

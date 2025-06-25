@@ -1,6 +1,5 @@
 package com.ltk.springproject.controller;
 
-import com.ltk.springproject.domain.Member;
 import com.ltk.springproject.domain.Work;
 import com.ltk.springproject.repository.MemberRepository;
 import com.ltk.springproject.service.WorkService;
@@ -43,11 +42,26 @@ public class WorkListController {
         model.addAttribute("selectedType", type);
         model.addAttribute("selectedSortBy", sortBy);
 
-        String pageTitle = "전체 작품";
-        if (!"All".equalsIgnoreCase(type)) {
-            pageTitle = type + " 목록";
+        // ==========================================================
+        // ★★★ 페이지 제목 생성 로직 수정 ★★★
+        // ==========================================================
+        String pageTitle;
+        switch (type.toLowerCase()) { // 소문자로 변경하여 비교
+            case "animation":
+                pageTitle = "애니메이션";
+                break;
+            case "movie":
+                pageTitle = "영화";
+                break;
+            case "tv":
+                pageTitle = "TV 시리즈";
+                break;
+            default: // "All" 또는 기타
+                pageTitle = "전체 작품";
+                break;
         }
         model.addAttribute("pageTitle", pageTitle);
+        // ==========================================================
 
         return "work/list";
     }

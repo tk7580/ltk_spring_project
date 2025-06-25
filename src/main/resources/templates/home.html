@@ -1,56 +1,40 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
 <head>
-    <title>PlotPath</title>
+    <title>PlotPath - AI 기반 작품 추천</title>
 </head>
 <th:block layout:fragment="content">
     <main class="main-content">
-        <section class="content-section" th:if="${currentUser != null and recommendedWorks != null and !recommendedWorks.isEmpty()}">
-            <h2 th:text="${currentUser.nickname} + '님을 위한 맞춤 추천'">OOO님을 위한 맞춤 추천</h2>
-            <div class="work-list" th:unless="${#lists.isEmpty(recommendedWorks)}">
-                <div class="work-card" th:each="work : ${recommendedWorks}">
-                    <a th:href="@{'/work/' + ${work.id}}">
-                        <img th:src="${work.thumbnailUrl != null ? work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
-                        <div class="work-info">
-                            <h3 th:text="${work.titleKr}">작품 제목</h3>
-                            <p th:text="${work.type}">작품 타입</p>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        </section>
-        <section class="content-section" th:if="${popularWorks != null and !popularWorks.isEmpty()}">
+        <section class="content-section">
             <h2>지금 인기있는 작품</h2>
+            <div th:if="${#lists.isEmpty(popularWorks)}">
+                <p>표시할 작품이 없습니다.</p>
+            </div>
             <div class="work-list" th:unless="${#lists.isEmpty(popularWorks)}">
                 <div class="work-card" th:each="work : ${popularWorks}">
                     <a th:href="@{'/work/' + ${work.id}}">
                         <img th:src="${work.thumbnailUrl != null ? work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
                         <div class="work-info">
-                            <h3 th:text="${work.titleKr}">작품 제목</h3>
-                            <p th:text="${work.type}">작품 타입</p>
+                            <h3 th:text="${work.titleKr}"></h3>
+                            <p>
+                                <span th:switch="${work.type}">
+                                    <span th:case="'Animation'">애니메이션</span>
+                                    <span th:case="'Movie'">영화</span>
+                                    <span th:case="'TV'">TV 시리즈</span>
+                                    <span th:case="*" th:text="${work.type}"></span>
+                                </span>
+                            </p>
                         </div>
                     </a>
                 </div>
             </div>
         </section>
-        <section class="content-section" th:if="${newWorks != null and !newWorks.isEmpty()}">
-            <h2>최신 등록 작품</h2>
-            <div class="work-list" th:unless="${#lists.isEmpty(newWorks)}">
-                <div class="work-card" th:each="work : ${newWorks}">
-                    <a th:href="@{'/work/' + ${work.id}}">
-                        <img th:src="${work.thumbnailUrl != null ? work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
-                        <div class="work-info">
-                            <h3 th:text="${work.titleKr}">작품 제목</h3>
-                            <p th:text="${work.type}">작품 타입</p>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        </section>
+
         <section class="content-section">
             <h2>다양한 작품 둘러보기</h2>
-            <p>이곳에 장르별 또는 작품 유형별로 탐색할 수 있는 UI를 추가할 수 있습니다.</p>
+            <p>이곳에 장르별 또는 다른 유형별로 탐색할 수 있는 UI를 추가할 수 있습니다.</p>
         </section>
+
     </main>
 </th:block>
 </html>

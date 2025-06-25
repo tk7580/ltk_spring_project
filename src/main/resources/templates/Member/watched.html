@@ -43,7 +43,14 @@
             <img th:src="${dto.work.thumbnailUrl != null ? dto.work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
             <div class="work-info">
               <h3 th:text="${dto.work.titleKr}">작품 제목</h3>
-              <p th:text="${dto.work.type}">작품 타입</p>
+              <p>
+    <span th:switch="${work.type}">
+        <span th:case="'Animation'">애니메이션</span>
+        <span th:case="'Movie'">영화</span>
+        <span th:case="'TV'">TV 시리즈</span>
+        <span th:case="*" th:text="${work.type}"></span>
+    </span>
+              </p>
             </div>
           </a>
           <div class="my-rating" th:if="${dto.score != null}">
