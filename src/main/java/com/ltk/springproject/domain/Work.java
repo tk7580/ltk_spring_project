@@ -2,10 +2,13 @@ package com.ltk.springproject.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "work")
@@ -36,11 +39,38 @@ public class Work {
     @Column(name = "titleOriginal")
     private String titleOriginal;
 
-    @Column(name = "type")
-    private String type;
+    // ===================================
+    // ★★★ [변경] 기존 type 필드 삭제 ★★★
+    // ===================================
+    // @Column(name = "type")
+    // private String type;
+
+    @Column(name = "isOriginal")
+    private Boolean isOriginal;
 
     @Column(name = "releaseDate")
     private LocalDate releaseDate;
+
+    @Column(name = "watchedCount")
+    private Integer watchedCount;
+
+    @Column(name = "averageRating")
+    private Double averageRating;
+
+    @Column(name = "ratingCount")
+    private Integer ratingCount;
+
+    @Column(name = "episodes")
+    private Integer episodes;
+
+    @Column(name = "duration")
+    private Integer duration;
+
+    @Column(name = "creators")
+    private String creators;
+
+    @Column(name = "studios")
+    private String studios;
 
     @Column(name = "releaseSequence")
     private Integer releaseSequence;
@@ -58,20 +88,32 @@ public class Work {
     @Column(name = "thumbnailUrl")
     private String thumbnailUrl;
 
+    @Column(name = "trailerUrl")
+    private String trailerUrl;
+
     @OneToMany(mappedBy = "work", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<WorkIdentifier> identifiers = new ArrayList<>();
 
-    // ===== WorkGenre 와의 관계 추가 =====
     @OneToMany(mappedBy = "work", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<WorkGenre> workGenres = new ArrayList<>();
-    // =====================================
+
+    // ==========================================================
+    // ★★★ [추가] WorkTypeMapping 과의 새로운 관계 설정 ★★★
+    // ==========================================================
+    @OneToMany(mappedBy = "work", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<WorkTypeMapping> workTypeMappings = new HashSet<>();
+
 
     @PrePersist
     protected void onCreate() {
         this.regDate = LocalDateTime.now();
         this.updateDate = LocalDateTime.now();
+        this.watchedCount = 0;
+        this.ratingCount = 0;
+        this.averageRating = 0.0;
     }
 
     @PreUpdate
