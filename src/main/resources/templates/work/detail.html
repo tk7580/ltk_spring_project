@@ -89,9 +89,9 @@
           </div>
           <div class="detail-separator"></div>
           <ul class="detail-meta-list">
-            <li><strong>타입</strong> <span th:text="${work.type}"></span></li>
             <li><strong>출시일</strong> <span th:text="${work.releaseDate}"></span></li>
-            <li th:if="${!work.type.equals('Movie')}">
+            <li><strong>제작사</strong> <span th:text="${work.studios}"></span></li>
+            <li th:if="${work.episodes != 1}">
               <strong>완결여부</strong>
               <span th:text="${work.isCompleted != null and work.isCompleted ? '완결' : '연재 중'}"></span>
             </li>
@@ -239,17 +239,12 @@
           ratingValue.textContent = parseFloat(this.value).toFixed(1);
         });
 
-        // ===== 이 부분이 추가됩니다. =====
         ratingComment.addEventListener("keydown", function(e) {
-          // Shift 키를 누르지 않은 상태에서 Enter 키가 눌렸을 때
           if (e.key === 'Enter' && !e.shiftKey) {
-            // 기본 동작(줄바꿈)을 막습니다.
             e.preventDefault();
-            // 저장 버튼을 대신 클릭해줍니다.
             saveRatingBtn.click();
           }
         });
-        // ==============================
 
         saveRatingBtn.addEventListener("click", async function() {
           const workId = rateBtn.dataset.workId;

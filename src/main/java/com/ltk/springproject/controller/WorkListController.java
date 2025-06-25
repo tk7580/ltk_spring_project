@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/works")
@@ -20,6 +22,14 @@ public class WorkListController {
 
     private final WorkService workService;
     private final MemberRepository memberRepository;
+
+    // DB에 저장된 영문 타입명과 화면에 표시할 한글명 매핑
+    private static final Map<String, String> typeDisplayNames = Map.of(
+            "Movie", "영화",
+            "Animation", "애니메이션",
+            "Drama", "드라마",
+            "Live-Action", "실사"
+    );
 
     @GetMapping("")
     public String showListPage(
@@ -36,32 +46,19 @@ public class WorkListController {
         List<Work> works = workService.findWorksByCriteria(type, sortBy);
         model.addAttribute("works", works);
 
+        // [수정] DB의 work_type에 있는 모든 타입을 가져옴
         List<String> workTypes = workService.findAllWorkTypes();
         model.addAttribute("workTypes", workTypes);
+
+        // [수정] 필터링과 페이지 제목에 사용할 한글 타입명 맵을 모델에 추가
+        model.addAttribute("typeDisplayNames", typeDisplayNames);
 
         model.addAttribute("selectedType", type);
         model.addAttribute("selectedSortBy", sortBy);
 
-        // ==========================================================
-        // ★★★ 페이지 제목 생성 로직 수정 ★★★
-        // ==========================================================
-        String pageTitle;
-        switch (type.toLowerCase()) { // 소문자로 변경하여 비교
-            case "animation":
-                pageTitle = "애니메이션";
-                break;
-            case "movie":
-                pageTitle = "영화";
-                break;
-            case "tv":
-                pageTitle = "TV 시리즈";
-                break;
-            default: // "All" 또는 기타
-                pageTitle = "전체 작품";
-                break;
-        }
+        // [수정] pageTitle 로직을 Map을 사용하여 더 유연하게 변경
+        String pageTitle = typeDisplayNames.getOrDefault(type, "전체 작품");
         model.addAttribute("pageTitle", pageTitle);
-        // ==========================================================
 
         return "work/list";
     }

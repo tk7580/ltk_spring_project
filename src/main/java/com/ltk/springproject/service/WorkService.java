@@ -3,6 +3,8 @@ package com.ltk.springproject.service;
 import com.ltk.springproject.domain.Work;
 import com.ltk.springproject.repository.WorkRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,12 +26,17 @@ public class WorkService {
         boolean isAllTypes = type == null || type.isEmpty() || "All".equalsIgnoreCase(type);
 
         if ("rating".equalsIgnoreCase(sortBy)) {
-            // '전체' 타입일 경우, 커스텀 정렬 메소드를 호출하도록 변경
-            return isAllTypes ? workRepository.findAllByOrderByAverageRatingDescCustom() : workRepository.findByTypeOrderByAverageRatingDesc(type);
+            // [수정] Repository의 변경된 메소드 이름(findByTypeName...)을 호출합니다.
+            return isAllTypes ? workRepository.findAllByOrderByAverageRatingDesc() : workRepository.findByTypeNameOrderByAverageRatingDesc(type);
         } else { // 기본값은 최신순 (newest)
-            // '전체' 타입일 경우, 커스텀 정렬 메소드를 호출하도록 변경
-            return isAllTypes ? workRepository.findAllByOrderByReleaseDateDescCustom() : workRepository.findByTypeOrderByReleaseDateDesc(type);
+            // [수정] Repository의 변경된 메소드 이름(findByTypeName...)을 호출합니다.
+            return isAllTypes ? workRepository.findAllByOrderByReleaseDateDesc() : workRepository.findByTypeNameOrderByReleaseDateDesc(type);
         }
+    }
+
+    public List<Work> findTopWorks(int size) {
+        Pageable pageable = PageRequest.of(0, size);
+        return workRepository.findTopWorksByRating(pageable);
     }
 
     public List<String> findAllWorkTypes() {

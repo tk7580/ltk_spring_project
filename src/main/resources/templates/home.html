@@ -2,6 +2,9 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
 <head>
     <title>PlotPath - AI 기반 작품 추천</title>
+    <style>
+        .work-card .types { font-size: 12px; color: #6c757d; }
+    </style>
 </head>
 <th:block layout:fragment="content">
     <main class="main-content">
@@ -16,12 +19,16 @@
                         <img th:src="${work.thumbnailUrl != null ? work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
                         <div class="work-info">
                             <h3 th:text="${work.titleKr}"></h3>
-                            <p>
-                                <span th:switch="${work.type}">
-                                    <span th:case="'Animation'">애니메이션</span>
-                                    <span th:case="'Movie'">영화</span>
-                                    <span th:case="'TV'">TV 시리즈</span>
-                                    <span th:case="*" th:text="${work.type}"></span>
+                            <p class="types">
+                                <span th:each="mapping, iterStat : ${work.workTypeMappings}">
+                                    <span th:switch="${mapping.workType.name}">
+                                        <span th:case="'Movie'">영화</span>
+                                        <span th:case="'Drama'">드라마</span>
+                                        <span th:case="'Animation'">애니메이션</span>
+                                        <span th:case="'Live-Action'">실사</span>
+                                        <span th:case="*" th:text="${mapping.workType.name}"></span>
+                                    </span>
+                                    <span th:if="!${iterStat.last}">, </span>
                                 </span>
                             </p>
                         </div>
@@ -34,7 +41,6 @@
             <h2>다양한 작품 둘러보기</h2>
             <p>이곳에 장르별 또는 다른 유형별로 탐색할 수 있는 UI를 추가할 수 있습니다.</p>
         </section>
-
     </main>
 </th:block>
 </html>

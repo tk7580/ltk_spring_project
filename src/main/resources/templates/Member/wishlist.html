@@ -1,36 +1,43 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
 <head>
-  <title>찜한 작품 - PlotPath</title>
+    <title>찜한 작품 - PlotPath</title>
+    <style>
+        .work-card .types { font-size: 12px; color: #6c757d; }
+    </style>
 </head>
 <th:block layout:fragment="content">
-  <main class="main-content">
-    <section class="content-section">
-      <h2>찜한 작품 목록</h2>
+    <main class="main-content">
+        <section class="content-section">
+            <h2>찜한 작품 목록</h2>
 
-      <div th:if="${#lists.isEmpty(wishlistedWorks)}">
-        <p>아직 찜한 작품이 없습니다.</p>
-      </div>
-
-      <div class="work-list" th:unless="${#lists.isEmpty(wishlistedWorks)}">
-        <div class="work-card" th:each="work : ${wishlistedWorks}">
-          <a th:href="@{'/work/' + ${work.id}}">
-            <img th:src="${work.thumbnailUrl != null ? work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
-            <div class="work-info">
-              <h3 th:text="${work.titleKr}">작품 제목</h3>
-              <p>
-    <span th:switch="${work.type}">
-        <span th:case="'Animation'">애니메이션</span>
-        <span th:case="'Movie'">영화</span>
-        <span th:case="'TV'">TV 시리즈</span>
-        <span th:case="*" th:text="${work.type}"></span>
-    </span>
-              </p>
+            <div th:if="${#lists.isEmpty(wishlistedWorks)}">
+                <p>아직 찜한 작품이 없습니다.</p>
             </div>
-          </a>
-        </div>
-      </div>
-    </section>
-  </main>
+
+            <div class="work-list" th:unless="${#lists.isEmpty(wishlistedWorks)}">
+                <div class="work-card" th:each="work : ${wishlistedWorks}">
+                    <a th:href="@{'/work/' + ${work.id}}">
+                        <img th:src="${work.thumbnailUrl != null ? work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
+                        <div class="work-info">
+                            <h3 th:text="${work.titleKr}">작품 제목</h3>
+                            <p class="types">
+                <span th:each="mapping, iterStat : ${work.workTypeMappings}">
+                    <span th:switch="${mapping.workType.name}">
+                        <span th:case="'Movie'">영화</span>
+                        <span th:case="'Drama'">드라마</span>
+                        <span th:case="'Animation'">애니메이션</span>
+                        <span th:case="'Live-Action'">실사</span>
+                        <span th:case="*" th:text="${mapping.workType.name}"></span>
+                    </span>
+                    <span th:if="!${iterStat.last}">, </span>
+                </span>
+                            </p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
 </th:block>
 </html>

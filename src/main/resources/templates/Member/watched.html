@@ -1,68 +1,72 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
 <head>
-  <title>감상 완료한 작품 - PlotPath</title>
-  <style>
-    .work-card .my-rating {
-      font-size: 13px;
-      padding: 8px 10px;
-      border-top: 1px solid #f0f0f0;
-      color: #495057;
-    }
-    .work-card .my-rating .score {
-      font-weight: bold;
-      color: #fd7e14;
-    }
-    .work-card .my-rating .score::before {
-      content: '★';
-      margin-right: 3px;
-    }
-    .work-card .my-rating .comment {
-      margin-top: 4px;
-      font-style: italic;
-      /* 긴 코멘트는 잘라내기 */
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      display: block;
-    }
-  </style>
+    <title>감상 완료한 작품 - PlotPath</title>
+    <style>
+        .work-card .types { font-size: 12px; color: #6c757d; margin-bottom: 5px; }
+        .work-card .my-rating {
+            font-size: 13px;
+            padding: 8px 10px;
+            border-top: 1px solid #f0f0f0;
+            color: #495057;
+        }
+        .work-card .my-rating .score {
+            font-weight: bold;
+            color: #fd7e14;
+        }
+        .work-card .my-rating .score::before {
+            content: '★';
+            margin-right: 3px;
+        }
+        .work-card .my-rating .comment {
+            margin-top: 4px;
+            font-style: italic;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+    </style>
 </head>
 <th:block layout:fragment="content">
-  <main class="main-content">
-    <section class="content-section">
-      <h2>감상 완료한 작품 목록</h2>
+    <main class="main-content">
+        <section class="content-section">
+            <h2>감상 완료한 작품 목록</h2>
 
-      <div th:if="${#lists.isEmpty(watchedWorks)}">
-        <p>아직 감상 완료한 작품이 없습니다.</p>
-      </div>
-
-      <div class="work-list" th:unless="${#lists.isEmpty(watchedWorks)}">
-        <div class="work-card" th:each="dto : ${watchedWorks}">
-          <a th:href="@{'/work/' + ${dto.work.id}}">
-            <img th:src="${dto.work.thumbnailUrl != null ? dto.work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
-            <div class="work-info">
-              <h3 th:text="${dto.work.titleKr}">작품 제목</h3>
-              <p>
-    <span th:switch="${work.type}">
-        <span th:case="'Animation'">애니메이션</span>
-        <span th:case="'Movie'">영화</span>
-        <span th:case="'TV'">TV 시리즈</span>
-        <span th:case="*" th:text="${work.type}"></span>
-    </span>
-              </p>
+            <div th:if="${#lists.isEmpty(watchedWorks)}">
+                <p>아직 감상 완료한 작품이 없습니다.</p>
             </div>
-          </a>
-          <div class="my-rating" th:if="${dto.score != null}">
-            <span class="score" th:text="${dto.score}"></span>
-            <span class="comment" th:text="${dto.comment}" th:if="${dto.comment != null and !dto.comment.isEmpty()}"></span>
-          </div>
-          <div class="my-rating" th:if="${dto.score == null}">
-            <span>- 평점 없음 -</span>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
+
+            <div class="work-list" th:unless="${#lists.isEmpty(watchedWorks)}">
+                <div class="work-card" th:each="dto : ${watchedWorks}">
+                    <a th:href="@{'/work/' + ${dto.work.id}}">
+                        <img th:src="${dto.work.thumbnailUrl != null ? dto.work.thumbnailUrl : '/images/placeholder_poster.png'}" alt="작품 썸네일"/>
+                        <div class="work-info">
+                            <h3 th:text="${dto.work.titleKr}">작품 제목</h3>
+                            <p class="types">
+                <span th:each="mapping, iterStat : ${dto.work.workTypeMappings}">
+                    <span th:switch="${mapping.workType.name}">
+                        <span th:case="'Movie'">영화</span>
+                        <span th:case="'Drama'">드라마</span>
+                        <span th:case="'Animation'">애니메이션</span>
+                        <span th:case="'Live-Action'">실사</span>
+                        <span th:case="*" th:text="${mapping.workType.name}"></span>
+                    </span>
+                    <span th:if="!${iterStat.last}">, </span>
+                </span>
+                            </p>
+                        </div>
+                    </a>
+                    <div class="my-rating" th:if="${dto.score != null}">
+                        <span class="score" th:text="${dto.score}"></span>
+                        <span class="comment" th:text="${dto.comment}" th:if="${dto.comment != null and !dto.comment.isEmpty()}"></span>
+                    </div>
+                    <div class="my-rating" th:if="${dto.score == null}">
+                        <span>- 평점 없음 -</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
 </th:block>
 </html>
