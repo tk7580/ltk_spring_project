@@ -26,7 +26,6 @@ CREATE TABLE `member`
     `delStatus`    TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
     `delDate`      DATETIME
 );
-
 CREATE TABLE `series`
 (
     `id`            BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -41,7 +40,6 @@ CREATE TABLE `series`
     `publisher`     VARCHAR(100),
     `studios`       VARCHAR(255)
 );
-
 CREATE TABLE `board`
 (
     `id`         BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -113,7 +111,6 @@ CREATE TABLE `article`
     FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE
 );
-
 CREATE TABLE `reply`
 (
     `id`                BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -130,7 +127,6 @@ CREATE TABLE `reply`
     FOREIGN KEY (`relId`) REFERENCES `article` (`id`) ON DELETE CASCADE,
     FOREIGN KEY (`parentId`) REFERENCES `reply` (`id`) ON DELETE CASCADE
 );
-
 CREATE TABLE `reactionPoint`
 (
     `id`           BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -143,7 +139,6 @@ CREATE TABLE `reactionPoint`
     `point`        INT      NOT NULL,
     FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE
 );
-
 CREATE TABLE `conpro`
 (
     `id`             BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -155,7 +150,6 @@ CREATE TABLE `conpro`
     `additionalInfo` TEXT,
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE
 );
-
 CREATE TABLE `memberWishlistWork`
 (
     `id`       BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -166,7 +160,6 @@ CREATE TABLE `memberWishlistWork`
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     UNIQUE KEY (`memberId`, `workId`)
 );
-
 CREATE TABLE `memberWatchedWork`
 (
     `id`          BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -179,7 +172,6 @@ CREATE TABLE `memberWatchedWork`
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     UNIQUE KEY (`memberId`, `workId`)
 );
-
 CREATE TABLE `memberWorkRating`
 (
     `id`         BIGINT        NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -193,7 +185,6 @@ CREATE TABLE `memberWorkRating`
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     UNIQUE KEY (`memberId`, `workId`)
 );
-
 CREATE TABLE `memberWishlistSeries`
 (
     `id`       BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -204,7 +195,6 @@ CREATE TABLE `memberWishlistSeries`
     FOREIGN KEY (`seriesId`) REFERENCES `series` (`id`) ON DELETE CASCADE,
     UNIQUE KEY (`memberId`, `seriesId`)
 );
-
 CREATE TABLE `work_identifier`
 (
     `id`         BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -216,7 +206,6 @@ CREATE TABLE `work_identifier`
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     UNIQUE KEY `UK_source` (`sourceName`, `sourceId`)
 );
-
 CREATE TABLE `genre`
 (
     `id`         BIGINT      NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -224,7 +213,6 @@ CREATE TABLE `genre`
     `updateDate` DATETIME    NOT NULL,
     `name`       VARCHAR(50) NOT NULL UNIQUE
 );
-
 CREATE TABLE `work_genre`
 (
     `id`      BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -235,7 +223,6 @@ CREATE TABLE `work_genre`
     FOREIGN KEY (`genreId`) REFERENCES `genre` (`id`) ON DELETE CASCADE,
     UNIQUE KEY `UK_workId_genreId` (`workId`, `genreId`)
 );
-
 CREATE TABLE `viewing_guide`
 (
     `id`               BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -246,7 +233,6 @@ CREATE TABLE `viewing_guide`
     `guideDescription` TEXT,
     FOREIGN KEY (`seriesId`) REFERENCES `series` (`id`) ON DELETE CASCADE
 );
-
 CREATE TABLE `viewing_guide_item`
 (
     `id`              BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -258,22 +244,22 @@ CREATE TABLE `viewing_guide_item`
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE
 );
 
--- work_type 마스터 테이블에 기본 타입 데이터 추가
+
+-- work_type 마스터 테이블에 최종 확정된 기본 타입 데이터 추가
 INSERT INTO `work_type` (`regDate`, `updateDate`, `name`)
 VALUES (NOW(), NOW(), 'Movie'),
-       (NOW(), NOW(), 'TV Series'),
-       (NOW(), NOW(), 'Animation'),
        (NOW(), NOW(), 'Drama'),
+       (NOW(), NOW(), 'Animation'),
        (NOW(), NOW(), 'Live-Action');
 
+-- 관리자 계정 추가
 INSERT INTO `member`
 (regDate, updateDate, loginId, loginPw, authLevel, `name`, nickname, cellphoneNum, email, delStatus)
 VALUES (NOW(),
         NOW(),
         'admin',
-           -- 비밀번호 'admin'을 BCrypt로 암호화한 값입니다.
         '$2a$10$N.x2nE0r2e.2G5.8iG5.8u7a2L6E2o3W8a6L2G5.8iG5.8u7a2L6E2o',
-        7, -- 권한 레벨 7: 관리자
+        7,
         'admin',
         'admin',
         'admin',

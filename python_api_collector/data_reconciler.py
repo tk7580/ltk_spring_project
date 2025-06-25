@@ -1,46 +1,28 @@
-# data_reconciler.py (파일 경로 문제 해결 최종본)
+# data_reconciler.py (다대다 타입 구조 대응 최종본)
 
 import os
 import requests
 import json
 import time
-from dotenv import load_dotenv, find_dotenv # find_dotenv 임포트 추가
+from dotenv import load_dotenv, find_dotenv
 import mysql.connector
 from mysql.connector import Error
 
-# --- 환경 변수 및 API 설정 ---
-# 현재 위치부터 상위 폴더로 올라가며 .env 파일을 찾아 로드
 load_dotenv(find_dotenv())
-
 API_URL = 'https://graphql.anilist.co'
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     import google.generativeai as genai
     genai.configure(api_key=GEMINI_API_KEY)
 
-# --- DB Helper Functions ---
 def get_db_connection():
-    host = os.getenv('DB_HOST')
-    user = os.getenv('DB_USER')
-    password = os.getenv('DB_PASSWORD')
-    database = os.getenv('DB_DATABASE')
-
-    # --- 디버깅을 위한 print문 (이제 정상적으로 값이 출력될 것입니다) ---
-    print("\n--- .env 파일에서 읽어온 DB 접속 정보 ---")
-    print(f"DB_HOST: {host}")
-    print(f"DB_USER: {user}")
-    print(f"DB_PASSWORD: {'설정됨' if password else '!!! 설정 안됨 !!!'}")
-    print(f"DB_DATABASE: {database}")
-    print("------------------------------------\n")
-
     try:
         connection = mysql.connector.connect(
-            host=host, user=user,
-            password=password, database=database, port=3306)
-        if connection.is_connected():
-            return connection
+            host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'), database=os.getenv('DB_DATABASE'), port=3306)
+        return connection
     except Error as e:
-        print(f"DB 연결 오류 (host: {host}): {e}")
+        print(f"DB 연결 오류: {e}")
         return None
 
 def find_or_create_series_in_db(cursor, title):
@@ -82,7 +64,6 @@ def get_full_details_from_anilist(anilist_id):
     }
     '''
     variables = {'id': anilist_id}
-    print(f"   (AniList에서 ID '{anilist_id}'의 상세 정보 조회...)")
     response = requests.post(API_URL, json={'query': query, 'variables': variables})
     response.raise_for_status()
     return response.json()['data']['Media']
@@ -97,13 +78,54 @@ def fetch_anime_with_relations(anime_id):
       }
     }
     '''
-    variables = {'id': anime_id}
+    variables = {'id': anilist_id}
     response = requests.post(API_URL, json={'query': query, 'variables': variables})
     response.raise_for_status()
     return response.json()['data']['Media']
 
+def get_type_ids_from_names(cursor, type_names):
+    """타입 이름 목록으로 work_type 테이블에서 ID 목록을 가져옵니다."""
+    type_ids = []
+    if not type_names: return type_ids
+    format_strings = ','.join(['%s'] * len(type_names))
+    query = f"SELECT id FROM work_type WHERE name IN ({format_strings})"
+    cursor.execute(query, tuple(type_names))
+    results = cursor.fetchall()
+    for row in results:
+        type_ids.append(row[0])
+    return type_ids
 
-# --- Main Processing Function ---
+def link_types_to_work(cursor, connection, work_id, type_ids):
+    """작품 ID와 타입 ID 목록으로 work_type_mapping 테이블에 데이터를 저장합니다."""
+    if not type_ids: return
+    delete_query = "DELETE FROM work_type_mapping WHERE workId = %s"
+    insert_query = "INSERT INTO work_type_mapping (workId, typeId, regDate) VALUES (%s, %s, NOW())"
+    try:
+        cursor.execute(delete_query, (work_id,))
+        data_to_insert = [(work_id, type_id) for type_id in type_ids]
+        cursor.executemany(insert_query, data_to_insert)
+        connection.commit()
+    except Error as e:
+        print(f"  [오류] 작품-타입 연결 중 DB 에러: {e}")
+        connection.rollback()
+
+def determine_types_from_anilist(anilist_data):
+    types = ['Animation'] # AniList에서 가져온 것은 기본적으로 'Animation'
+
+    # 포맷에 따라 Movie 또는 TV Series 추가
+    anilist_format = anilist_data.get('format')
+    if anilist_format == 'MOVIE':
+        types.append('Movie')
+    elif anilist_format in ['TV', 'TV_SHORT']:
+        types.append('TV Series')
+
+    # 장르에 Drama가 있으면 Drama 타입 추가
+    if 'Drama' in anilist_data.get('genres', []):
+        types.append('Drama')
+
+    return list(set(types)) # 중복 제거 후 리스트로 반환
+
+
 def process_series_from_entry_point(entry_anilist_id):
     print(f"\n{'='*20} [ 시리즈 처리 시작 (시작 ID: {entry_anilist_id}) ] {'='*20}")
     connection = get_db_connection()
@@ -127,45 +149,32 @@ def process_series_from_entry_point(entry_anilist_id):
             title_kr = details['title']['english'] or details['title']['romaji']
             print(f"\n--- '{title_kr}' (AniList ID: {anilist_id}) 처리 ---")
 
+            # AniList 데이터 기반으로 타입 결정
+            type_names = determine_types_from_anilist(details)
+            type_ids = get_type_ids_from_names(cursor, type_names)
+
             if work_id_in_db:
                 print(f"  [UPDATE]: DB에 workId '{work_id_in_db}'(으)로 존재. 정보 보강 실행.")
-                update_query = """
-                UPDATE work SET
-                    seriesId = %s, type = %s, description = %s, episodes = %s,
-                    duration = %s, studios = %s, isCompleted = %s, updateDate = NOW(),
-                    titleKr = %s, titleOriginal = %s, releaseDate = %s, thumbnailUrl = %s, trailerUrl = %s
-                WHERE id = %s
-                """
-                studios_str = ", ".join(node['name'] for node in details.get('studios', {}).get('nodes', []))
-                is_completed = 1 if details.get('status') == 'FINISHED' else 0
+                update_query = "UPDATE work SET seriesId = %s, description = %s, episodes = %s, duration = %s, studios = %s, isCompleted = %s, updateDate = NOW(), titleKr = %s, titleOriginal = %s, releaseDate = %s, thumbnailUrl = %s, trailerUrl = %s WHERE id = %s"
                 start_date_str = f"{details['startDate']['year']}-{(details['startDate']['month'] or 1):02d}-{(details['startDate']['day'] or 1):02d}"
+                studios_str = ", ".join(node['name'] for node in details.get('studios', {}).get('nodes', []))
                 trailer_url = f"https://www.youtube.com/watch?v={details['trailer']['id']}" if details.get('trailer') and details['trailer']['site'] == 'youtube' else None
-                params = (
-                    series_id, 'Animation', details.get('description'), details.get('episodes'),
-                    details.get('duration'), studios_str, is_completed, title_kr, details['title']['native'],
-                    start_date_str, details.get('coverImage', {}).get('extraLarge'), trailer_url,
-                    work_id_in_db
-                )
+                params = (series_id, details.get('description'), details.get('episodes'), details.get('duration'), studios_str, 1 if details.get('status') == 'FINISHED' else 0, title_kr, details['title']['native'], start_date_str, details.get('coverImage', {}).get('extraLarge'), trailer_url, work_id_in_db)
                 cursor.execute(update_query, params)
-                print(f"  -> 기존 work(id:{work_id_in_db}) 정보 업데이트 완료 (새 seriesId: {series_id} 연결)")
+                link_types_to_work(cursor, connection, work_id_in_db, type_ids)
+                print(f"  -> 기존 work(id:{work_id_in_db}) 정보/타입 업데이트 완료: {type_names}")
             else:
                 print(f"  [INSERT]: DB에 없는 작품. 신규 추가 실행.")
                 start_date_str = f"{details['startDate']['year']}-{(details['startDate']['month'] or 1):02d}-{(details['startDate']['day'] or 1):02d}"
                 studios_str = ", ".join(node['name'] for node in details.get('studios', {}).get('nodes', []))
                 trailer_url = f"https://www.youtube.com/watch?v={details['trailer']['id']}" if details.get('trailer') and details['trailer']['site'] == 'youtube' else None
-                insert_query = """
-                INSERT INTO work (seriesId, regDate, updateDate, titleKr, titleOriginal, type, releaseDate, episodes, duration, studios, description, thumbnailUrl, trailerUrl, isCompleted)
-                VALUES (%s, NOW(), NOW(), %s, %s, 'Animation', %s, %s, %s, %s, %s, %s, %s, %s)
-                """
-                params = (
-                    series_id, title_kr, details['title']['native'], start_date_str, details.get('episodes'),
-                    details.get('duration'), studios_str, details.get('description'),
-                    details.get('coverImage', {}).get('extraLarge'), trailer_url, 1 if details.get('status') == 'FINISHED' else 0
-                )
+                insert_query = "INSERT INTO work (seriesId, regDate, updateDate, titleKr, titleOriginal, releaseDate, episodes, duration, studios, description, thumbnailUrl, trailerUrl, isCompleted) VALUES (%s, NOW(), NOW(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                params = (series_id, title_kr, details['title']['native'], start_date_str, details.get('episodes'), details.get('duration'), studios_str, details.get('description'), details.get('coverImage', {}).get('extraLarge'), trailer_url, 1 if details.get('status') == 'FINISHED' else 0)
                 cursor.execute(insert_query, params)
                 new_work_id = cursor.lastrowid
                 cursor.execute("INSERT INTO work_identifier (workId, sourceName, sourceId, regDate, updateDate) VALUES (%s, 'ANILIST_ANIME', %s, NOW(), NOW())", (new_work_id, str(anilist_id)))
-                print(f"  -> 신규 work 추가 완료 (새 workId: {new_work_id})")
+                link_types_to_work(cursor, connection, new_work_id, type_ids)
+                print(f"  -> 신규 work 추가 완료 (새 workId: {new_work_id}), 타입: {type_names}")
 
         connection.commit()
     except Exception as e:
@@ -177,6 +186,6 @@ def process_series_from_entry_point(entry_anilist_id):
             connection.close()
             print("\nDB 연결이 종료되었습니다.")
 
+
 if __name__ == "__main__":
-    test_id = 21459 # 나의 히어로 아카데미아 1기
-    process_series_from_entry_point(test_id)
+    process_series_from_entry_point(21459)
