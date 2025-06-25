@@ -1,44 +1,45 @@
-# anilist_collector.py (여러 작품을 순차적으로 처리하는 감독 스크립트)
+# anilist_collector.py (최종 완성본)
 
 import requests
-import json
 import time
-from data_reconciler import reconcile_and_update_work # 우리가 만든 모듈에서 함수 임포트
+import mysql.connector
+from mysql.connector import Error
+from dotenv import load_dotenv, find_dotenv
 
-# AniList GraphQL API 엔드포인트 URL
+# data_reconciler.py 에서 최종 완성된 함수를 임포트
+from data_reconciler import process_series_from_entry_point
+
+# --- 환경 변수 로드 ---
+load_dotenv(find_dotenv())
 API_URL = 'https://graphql.anilist.co'
 
-def get_popular_anime_list(page=1, per_page=5):
+def get_db_connection():
+    # 이 스크립트에서 직접 DB에 접속할 일이 있으므로 연결 함수 유지
+    try:
+        connection = mysql.connector.connect(
+            host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'), database=os.getenv('DB_DATABASE'), port=3306)
+        return connection
+    except Error as e:
+        print(f"DB 연결 오류: {e}")
+        return None
+
+def get_popular_anime_list(page=1, per_page=10):
     """
     AniList에서 인기있는 애니메이션 목록을 가져옵니다.
-    (한 번에 너무 많지 않게 per_page로 개수 조절)
     """
     print(f"AniList에서 인기 애니메이션 목록 조회 시작 (페이지: {page}, 개수: {per_page})")
-
     query = '''
     query ($page: Int, $perPage: Int) {
       Page (page: $page, perPage: $perPage) {
-        pageInfo {
-          total
-          currentPage
-          lastPage
-          hasNextPage
-        }
         media (type: ANIME, sort: POPULARITY_DESC) {
           id
-          title {
-            english
-            romaji
-          }
+          title { english romaji }
         }
       }
     }
     '''
-    variables = {
-        'page': page,
-        'perPage': per_page
-    }
-
+    variables = {'page': page, 'perPage': per_page}
     try:
         response = requests.post(API_URL, json={'query': query, 'variables': variables})
         response.raise_for_status()
@@ -47,22 +48,50 @@ def get_popular_anime_list(page=1, per_page=5):
         print(f"애니메이션 목록을 가져오는 중 오류 발생: {e}")
         return []
 
-def main():
-    # 처리할 애니메이션 목록을 가져옴 (테스트를 위해 5개만)
-    anime_list = get_popular_anime_list(page=1, per_page=5)
+def get_processed_anilist_ids(connection):
+    """ 이미 처리된 AniList ID 목록을 DB에서 가져옵니다. """
+    processed_ids = set()
+    try:
+        cursor = connection.cursor()
+        cursor.execute("SELECT sourceId FROM work_identifier WHERE sourceName = 'ANILIST_ANIME'")
+        results = cursor.fetchall()
+        for row in results:
+            processed_ids.add(int(row[0]))
+        cursor.close()
+    except Error as e:
+        print(f"기처리 ID 목록 조회 중 오류 발생: {e}")
+    return processed_ids
 
+
+def main():
+    connection = get_db_connection()
+    if not connection: return
+
+    # 1. 이미 DB에 등록된 AniList ID들을 가져와서, 중복 처리를 방지
+    processed_ids = get_processed_anilist_ids(connection)
+    print(f"현재까지 DB에 등록된 AniList 작품 수: {len(processed_ids)}개")
+
+    connection.close() # ID 목록만 확인하고 일단 연결 종료
+
+    # 2. 처리할 애니메이션 목록을 새로 가져옴 (테스트를 위해 10개)
+    anime_list = get_popular_anime_list(page=1, per_page=10)
     if not anime_list:
         print("처리할 애니메이션 목록이 없습니다.")
         return
 
     print(f"\n총 {len(anime_list)}개의 애니메이션에 대한 데이터 정제 및 보강 작업을 시작합니다.")
 
-    # 목록을 순회하며 각 ID에 대해 정제/보강 함수를 호출
+    # 3. 목록을 순회하며, 아직 처리되지 않은 작품에 대해서만 정제/보강 함수를 호출
     for anime in anime_list:
         anilist_id = anime['id']
+        title = anime['title']['english'] or anime['title']['romaji']
+
+        if anilist_id in processed_ids:
+            print(f"\n[SKIP] '{title}' (AniList ID: {anilist_id})는 이미 처리된 작품입니다.")
+            continue
 
         # data_reconciler.py에 있는 핵심 함수를 호출
-        reconcile_and_update_work(anilist_id)
+        process_series_from_entry_point(anilist_id)
 
         # AniList API에 대한 예의를 지키고, 차단을 피하기 위해 잠시 대기
         print("다음 작업을 위해 2초 대기...")
