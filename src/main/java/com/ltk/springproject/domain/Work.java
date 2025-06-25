@@ -39,12 +39,6 @@ public class Work {
     @Column(name = "titleOriginal")
     private String titleOriginal;
 
-    // ===================================
-    // ★★★ [변경] 기존 type 필드 삭제 ★★★
-    // ===================================
-    // @Column(name = "type")
-    // private String type;
-
     @Column(name = "isOriginal")
     private Boolean isOriginal;
 
@@ -99,9 +93,6 @@ public class Work {
     @Builder.Default
     private List<WorkGenre> workGenres = new ArrayList<>();
 
-    // ==========================================================
-    // ★★★ [추가] WorkTypeMapping 과의 새로운 관계 설정 ★★★
-    // ==========================================================
     @OneToMany(mappedBy = "work", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<WorkTypeMapping> workTypeMappings = new HashSet<>();

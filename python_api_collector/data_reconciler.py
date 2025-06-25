@@ -8,13 +8,11 @@ from dotenv import load_dotenv, find_dotenv
 import mysql.connector
 from mysql.connector import Error
 
+# --- 환경 변수 및 API 설정 ---
 load_dotenv(find_dotenv())
 API_URL = 'https://graphql.anilist.co'
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    import google.generativeai as genai
-    genai.configure(api_key=GEMINI_API_KEY)
 
+# --- DB Helper Functions ---
 def get_db_connection():
     try:
         connection = mysql.connector.connect(
@@ -64,6 +62,7 @@ def get_full_details_from_anilist(anilist_id):
     }
     '''
     variables = {'id': anilist_id}
+    print(f"   (AniList에서 ID '{anilist_id}'의 상세 정보 조회...)")
     response = requests.post(API_URL, json={'query': query, 'variables': variables})
     response.raise_for_status()
     return response.json()['data']['Media']
@@ -78,13 +77,12 @@ def fetch_anime_with_relations(anime_id):
       }
     }
     '''
-    variables = {'id': anilist_id}
+    variables = {'id': anime_id}
     response = requests.post(API_URL, json={'query': query, 'variables': variables})
     response.raise_for_status()
     return response.json()['data']['Media']
 
 def get_type_ids_from_names(cursor, type_names):
-    """타입 이름 목록으로 work_type 테이블에서 ID 목록을 가져옵니다."""
     type_ids = []
     if not type_names: return type_ids
     format_strings = ','.join(['%s'] * len(type_names))
@@ -96,7 +94,6 @@ def get_type_ids_from_names(cursor, type_names):
     return type_ids
 
 def link_types_to_work(cursor, connection, work_id, type_ids):
-    """작품 ID와 타입 ID 목록으로 work_type_mapping 테이블에 데이터를 저장합니다."""
     if not type_ids: return
     delete_query = "DELETE FROM work_type_mapping WHERE workId = %s"
     insert_query = "INSERT INTO work_type_mapping (workId, typeId, regDate) VALUES (%s, %s, NOW())"
@@ -110,22 +107,19 @@ def link_types_to_work(cursor, connection, work_id, type_ids):
         connection.rollback()
 
 def determine_types_from_anilist(anilist_data):
-    types = ['Animation'] # AniList에서 가져온 것은 기본적으로 'Animation'
+    types = {'Animation'} # set으로 중복 방지
 
-    # 포맷에 따라 Movie 또는 TV Series 추가
     anilist_format = anilist_data.get('format')
     if anilist_format == 'MOVIE':
-        types.append('Movie')
-    elif anilist_format in ['TV', 'TV_SHORT']:
-        types.append('TV Series')
+        types.add('Movie')
 
     # 장르에 Drama가 있으면 Drama 타입 추가
     if 'Drama' in anilist_data.get('genres', []):
-        types.append('Drama')
+        types.add('Drama')
 
-    return list(set(types)) # 중복 제거 후 리스트로 반환
+    return list(types)
 
-
+# --- Main Processing Function ---
 def process_series_from_entry_point(entry_anilist_id):
     print(f"\n{'='*20} [ 시리즈 처리 시작 (시작 ID: {entry_anilist_id}) ] {'='*20}")
     connection = get_db_connection()
@@ -149,7 +143,6 @@ def process_series_from_entry_point(entry_anilist_id):
             title_kr = details['title']['english'] or details['title']['romaji']
             print(f"\n--- '{title_kr}' (AniList ID: {anilist_id}) 처리 ---")
 
-            # AniList 데이터 기반으로 타입 결정
             type_names = determine_types_from_anilist(details)
             type_ids = get_type_ids_from_names(cursor, type_names)
 
@@ -185,7 +178,6 @@ def process_series_from_entry_point(entry_anilist_id):
             cursor.close()
             connection.close()
             print("\nDB 연결이 종료되었습니다.")
-
 
 if __name__ == "__main__":
     process_series_from_entry_point(21459)
