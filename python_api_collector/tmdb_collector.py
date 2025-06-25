@@ -32,7 +32,7 @@ def get_or_create_genre_ids(cursor, connection, genre_names):
             cursor.execute(insert_query, (name,))
             genre_id = cursor.lastrowid
             genre_ids.append(genre_id)
-            print(f"    - 신규 장르 '{name}' -> genre 테이블 저장 (genreId: {genre_id})")
+            # print(f"    - 신규 장르 '{name}' -> genre 테이블 저장 (genreId: {genre_id})") # 로그 간소화를 위해 주석 처리
     connection.commit()
     return genre_ids
 
@@ -157,7 +157,21 @@ def upsert_item(cursor, connection, item_summary, media_type, api_key):
     operation_type = None
 
     if work_id:
-        # UPDATE
+        # ==========================================================
+        # ★★★ 수정 시작: 업데이트 전, DB의 현재 타입을 확인 ★★★
+        # ==========================================================
+        cursor.execute("SELECT type FROM work WHERE id = %s", (work_id,))
+        # fetchone()은 튜플을 반환하므로, 첫 번째 요소를 가져와야 합니다.
+        result = cursor.fetchone()
+        current_type = result[0] if result else None
+
+        if current_type == 'Animation':
+            print(f"  [SKIP] '{normalized_data.get('titleKr')}' (workId: {work_id}) -> 이미 'Animation' 타입으로 수정된 작품이므로, TMDB 데이터로 덮어쓰지 않습니다.")
+            return # 함수를 종료하여 업데이트 방지
+        # ==========================================================
+        # ★★★ 수정 종료 ★★★
+
+        # 'Animation' 타입이 아닌 경우에만 아래의 기존 업데이트 로직 실행
         update_work_query = "UPDATE work SET titleKr=%s, titleOriginal=%s, releaseDate=%s, description=%s, thumbnailUrl=%s, trailerUrl=%s, isCompleted=%s, episodes=%s, duration=%s, creators=%s, studios=%s, updateDate=NOW() WHERE id=%s"
         cursor.execute(update_work_query, (normalized_data['titleKr'], normalized_data['titleOriginal'], normalized_data.get('releaseDate') or None, normalized_data['description'], normalized_data['thumbnailUrl'], normalized_data['trailerUrl'], normalized_data['isCompleted'], normalized_data['episodes'], normalized_data['duration'], normalized_data['creators'], normalized_data['studios'], work_id))
         print(f"  [업데이트] '{normalized_data.get('titleKr')}' (workId: {work_id}) -> 정보 업데이트 완료")

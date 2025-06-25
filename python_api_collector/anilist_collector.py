@@ -86,7 +86,7 @@ def main():
     print(f"현재까지 DB에 등록된 AniList 작품 수: {len(processed_ids)}개")
 
     # 2. 지정된 페이지 수만큼 반복하여 처리
-    for page_num in range(1, TOTAL_PAGES_TO_FETCH + 1):
+    for page_num in range(1, 21):
         anime_list = get_popular_anime_list(page=page_num, per_page=50)
         if not anime_list:
             print(f"{page_num} 페이지에서 더 이상 가져올 목록이 없습니다. 작업을 중단합니다.")
