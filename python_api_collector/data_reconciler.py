@@ -8,11 +8,9 @@ from dotenv import load_dotenv, find_dotenv
 import mysql.connector
 from mysql.connector import Error
 
-# --- 환경 변수 및 API 설정 ---
 load_dotenv(find_dotenv())
 API_URL = 'https://graphql.anilist.co'
 
-# --- DB Helper Functions ---
 def get_db_connection():
     try:
         connection = mysql.connector.connect(
@@ -107,19 +105,17 @@ def link_types_to_work(cursor, connection, work_id, type_ids):
         connection.rollback()
 
 def determine_types_from_anilist(anilist_data):
-    types = {'Animation'} # set으로 중복 방지
+    types = {'Animation'}
 
     anilist_format = anilist_data.get('format')
     if anilist_format == 'MOVIE':
         types.add('Movie')
 
-    # 장르에 Drama가 있으면 Drama 타입 추가
     if 'Drama' in anilist_data.get('genres', []):
         types.add('Drama')
 
     return list(types)
 
-# --- Main Processing Function ---
 def process_series_from_entry_point(entry_anilist_id):
     print(f"\n{'='*20} [ 시리즈 처리 시작 (시작 ID: {entry_anilist_id}) ] {'='*20}")
     connection = get_db_connection()
@@ -179,5 +175,6 @@ def process_series_from_entry_point(entry_anilist_id):
             connection.close()
             print("\nDB 연결이 종료되었습니다.")
 
+
 if __name__ == "__main__":
-    process_series_from_entry_point(21459)
+    process_series_from_entry_point(21459) # 나의 히어로 아카데미아

@@ -1,5 +1,3 @@
-# tmdb_collector.py (다대다 타입 구조 대응 최종본)
-
 import os
 import requests
 import json
@@ -11,9 +9,13 @@ import argparse
 
 def find_work_by_external_id(cursor, source_name, source_id):
     query = "SELECT workId FROM work_identifier WHERE sourceName = %s AND sourceId = %s LIMIT 1"
-    cursor.execute(query, (source_name, str(source_id)))
-    result = cursor.fetchone()
-    return result[0] if result else None
+    try:
+        cursor.execute(query, (source_name, str(source_id)))
+        result = cursor.fetchone()
+        return result[0] if result else None
+    except Error as e:
+        print(f"  [오류] 외부 ID 조회 중 DB 에러: {e}")
+        return None
 
 def get_or_create_genre_ids(cursor, connection, genre_names):
     genre_ids = []
@@ -68,26 +70,24 @@ def link_types_to_work(cursor, connection, work_id, type_ids):
         print(f"  [오류] 작품-타입 연결 중 DB 에러: {e}")
         connection.rollback()
 
-def find_or_create_series(cursor, connection, item_data, media_type):
+def find_or_create_series(cursor, connection, item_data):
     title_kr = item_data.get('titleKr')
     title_original = item_data.get('titleOriginal')
 
-    if media_type == 'movie':
-        collection_info = item_data.get('collection')
-        if collection_info and collection_info.get('name'):
-            series_title = collection_info['name']
-            cursor.execute("SELECT id FROM series WHERE titleKr = %s OR titleOriginal = %s LIMIT 1", (series_title, series_title))
-            result = cursor.fetchone()
-            if result: return result[0]
+    collection_info = item_data.get('collection')
+    if collection_info and collection_info.get('name'):
+        series_title = collection_info['name']
+        cursor.execute("SELECT id FROM series WHERE titleKr = %s OR titleOriginal = %s LIMIT 1", (series_title, series_title))
+        result = cursor.fetchone()
+        if result: return result[0]
 
-            poster_path = f"https://image.tmdb.org/t/p/w500{collection_info.get('poster_path')}" if collection_info.get('poster_path') else None
-            series_data = (series_title, series_title, None, poster_path, None, None, None, None)
-            insert_query = "INSERT INTO series (titleKr, titleOriginal, description, thumbnailUrl, coverImageUrl, author, studios, publisher, regDate, updateDate) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())"
-            cursor.execute(insert_query, series_data)
-            return cursor.lastrowid
+        poster_path = f"https://image.tmdb.org/t/p/w500{collection_info.get('poster_path')}" if collection_info.get('poster_path') else None
+        series_data = (series_title, series_title, None, poster_path, None, None, None, None)
+        insert_query = "INSERT INTO series (titleKr, titleOriginal, description, thumbnailUrl, coverImageUrl, author, studios, publisher, regDate, updateDate) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())"
+        cursor.execute(insert_query, series_data)
+        return cursor.lastrowid
 
-    # 단일 작품이면서 시리즈가 없는 경우, 작품 정보를 기반으로 단일 시리즈 생성
-    series_data = (title_kr, title_original, item_data.get('description'), item_data.get('thumbnailUrl'), item_data.get('coverImageUrl'), item_data.get('author'), item_data.get('studios'), item_data.get('publisher'))
+    series_data = (title_kr, title_original, item_data.get('description'), item_data.get('thumbnailUrl'), None, None, item_data.get('studios'), None)
     insert_query = "INSERT INTO series (titleKr, titleOriginal, description, thumbnailUrl, coverImageUrl, author, studios, publisher, regDate, updateDate) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())"
     cursor.execute(insert_query, series_data)
     return cursor.lastrowid
@@ -105,11 +105,8 @@ def normalize_tmdb_data(item_detail, media_type):
     genres = [genre['name'] for genre in item_detail.get('genres', [])]
 
     types = []
-    # TMDB 장르 ID '16'은 Animation
     is_animation = 16 in [genre['id'] for genre in item_detail.get('genres', [])]
-
-    # TMDB 장르 ID '10759'(Action & Adventure), '18'(Drama)
-    is_drama = 10759 in [genre['id'] for genre in item_detail.get('genres', [])] or 18 in [genre['id'] for genre in item_detail.get('genres', [])]
+    is_drama = 18 in [genre['id'] for genre in item_detail.get('genres', [])]
 
     if media_type == 'movie':
         types.append('Movie')
@@ -160,7 +157,7 @@ def upsert_item(cursor, connection, item_summary, media_type, api_key):
         cursor.execute(update_work_query, (normalized_data['titleKr'], normalized_data['titleOriginal'], normalized_data.get('releaseDate'), normalized_data['description'], normalized_data['thumbnailUrl'], normalized_data['studios'], work_id))
         print(f"  [업데이트] (workId: {work_id}) -> 정보 업데이트 완료")
     else:
-        series_id = find_or_create_series(cursor, connection, normalized_data, media_type)
+        series_id = find_or_create_series(cursor, connection, normalized_data)
         insert_work_query = "INSERT INTO work (seriesId, regDate, updateDate, titleKr, titleOriginal, releaseDate, description, thumbnailUrl, studios) VALUES (%s, NOW(), NOW(), %s, %s, %s, %s, %s, %s)"
         cursor.execute(insert_work_query, (series_id, normalized_data['titleKr'], normalized_data['titleOriginal'], normalized_data.get('releaseDate'), normalized_data['description'], normalized_data['thumbnailUrl'], normalized_data['studios']))
         work_id = cursor.lastrowid
@@ -193,7 +190,7 @@ def main():
     connection = None
     try:
         connection = mysql.connector.connect(host=db_host, user=db_user, password=db_password, database=db_database, port=3306)
-        cursor = connection.cursor(buffered=True)
+        cursor = connection.cursor(dictionary=True, buffered=True)
         print("데이터베이스에 성공적으로 연결되었습니다.")
 
         media_types_to_process = [args.type] if args.type else ['movie', 'tv']
