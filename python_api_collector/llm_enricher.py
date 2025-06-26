@@ -1,16 +1,21 @@
+# llm_enricher.py (명령줄 인수 기능 추가)
+
 import os
 import time
 import json
+import argparse # ★★★ argparse 라이브러리 임포트 ★★★
 from dotenv import load_dotenv, find_dotenv
 import mysql.connector
 from mysql.connector import Error
 
+# --- 환경 변수 및 API 설정 ---
 load_dotenv(find_dotenv())
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     import google.generativeai as genai
     genai.configure(api_key=GEMINI_API_KEY)
 
+# --- DB Helper Functions ---
 def get_db_connection():
     try:
         connection = mysql.connector.connect(
@@ -22,7 +27,7 @@ def get_db_connection():
         print(f"DB 연결 오류: {e}")
         return None
 
-def get_works_to_enrich(cursor, limit=10):
+def get_works_to_enrich(cursor, limit):
     """ 한글 제목/썸네일/줄거리가 부실한 작품 목록을 가져옵니다. """
     print(f"DB에서 보강이 필요한 작품을 {limit}개 가져옵니다...")
     query = """
@@ -49,7 +54,7 @@ def ask_gemini_for_enrichment(title):
     작품의 원제 또는 영문 제목이 '{title}' 입니다.
     이 작품의 정보 3가지를 찾아서, 반드시 아래와 같은 JSON 형식으로만 답변해주세요.
 
-    1.  "korean_title": 이 작품의 한국 정식 제목. 한국어 제목이 없다면 null 값을 반환해주세요.
+    1.  "korean_title": 이 작품의 한국어 정식 제목. 한국어 제목이 없다면 null 값을 반환해주세요.
     2.  "poster_url": 이 작품을 대표하는 고화질 세로 포스터 이미지의 URL. 없다면 null 값을 반환해주세요.
     3.  "korean_description": 이 작품의 공식 소개글 또는 스포일러가 없는 한국어 줄거리 요약. 없다면 null 값을 반환해주세요.
 
@@ -65,14 +70,19 @@ def ask_gemini_for_enrichment(title):
         return None
 
 def main():
+    # ★★★ [수정] 명령줄 인수 파서 설정 ★★★
+    parser = argparse.ArgumentParser(description="LLM을 이용해 작품의 누락된 정보(한글 제목, 썸네일 등)를 보강합니다.")
+    parser.add_argument('--limit', type=int, default=10, help="한 번에 처리할 작품의 최대 개수")
+    args = parser.parse_args()
+
     print("=== LLM 데이터 보강 스크립트 시작 ===")
     connection = get_db_connection()
     if not connection: return
 
     cursor = connection.cursor(dictionary=True)
 
-    PROCESS_LIMIT = 10
-    candidates = get_works_to_enrich(cursor, limit=PROCESS_LIMIT)
+    # ★★★ [수정] 하드코딩된 변수 대신 args.limit 사용 ★★★
+    candidates = get_works_to_enrich(cursor, limit=args.limit)
 
     if not candidates:
         print("데이터 보강이 필요한 작품이 없습니다.")
@@ -142,7 +152,6 @@ def main():
             cursor.close()
             connection.close()
             print("\n=== 스크립트 종료 ===")
-
 
 if __name__ == "__main__":
     main()

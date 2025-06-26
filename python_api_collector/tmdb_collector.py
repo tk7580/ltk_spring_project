@@ -1,4 +1,4 @@
-# tmdb_collector.py (애니메이션 TV 시리즈 Skip 기능 추가)
+# tmdb_collector.py (KeyError 수정 최종본)
 
 import os
 import requests
@@ -9,12 +9,16 @@ from dotenv import load_dotenv, find_dotenv
 import time
 import argparse
 
-# (find_work_by_external_id, get_or_create_genre_ids, link_genres_to_work, get_type_ids_from_names, link_types_to_work, find_or_create_series, get_api_data 함수는 이전과 동일)
 def find_work_by_external_id(cursor, source_name, source_id):
     query = "SELECT workId FROM work_identifier WHERE sourceName = %s AND sourceId = %s LIMIT 1"
-    cursor.execute(query, (source_name, str(source_id)))
-    result = cursor.fetchone()
-    return result[0] if result else None
+    try:
+        cursor.execute(query, (source_name, str(source_id)))
+        result = cursor.fetchone()
+        # ★★★ [수정] result[0] -> result['workId']
+        return result['workId'] if result else None
+    except Error as e:
+        print(f"  [오류] 외부 ID 조회 중 DB 에러: {e}")
+        return None
 
 def get_or_create_genre_ids(cursor, connection, genre_names):
     genre_ids = []
@@ -25,7 +29,8 @@ def get_or_create_genre_ids(cursor, connection, genre_names):
         cursor.execute(select_query, (name,))
         result = cursor.fetchone()
         if result:
-            genre_ids.append(result[0])
+            # ★★★ [수정] result[0] -> result['id']
+            genre_ids.append(result['id'])
         else:
             cursor.execute(insert_query, (name,))
             genre_ids.append(cursor.lastrowid)
@@ -53,7 +58,8 @@ def get_type_ids_from_names(cursor, type_names):
     cursor.execute(query, tuple(type_names))
     results = cursor.fetchall()
     for row in results:
-        type_ids.append(row[0])
+        # ★★★ [수정] row[0] -> row['id']
+        type_ids.append(row['id'])
     return type_ids
 
 def link_types_to_work(cursor, connection, work_id, type_ids):
@@ -78,7 +84,9 @@ def find_or_create_series(cursor, connection, item_data):
         series_title = collection_info['name']
         cursor.execute("SELECT id FROM series WHERE titleKr = %s OR titleOriginal = %s LIMIT 1", (series_title, series_title))
         result = cursor.fetchone()
-        if result: return result[0]
+        if result:
+            # ★★★ [수정] result[0] -> result['id']
+            return result['id']
 
         poster_path = f"https://image.tmdb.org/t/p/w500{collection_info.get('poster_path')}" if collection_info.get('poster_path') else None
         series_data = (series_title, series_title, None, poster_path, None, None, None, None)
@@ -104,7 +112,6 @@ def normalize_tmdb_data(item_detail, media_type):
     genres = [genre['name'] for genre in item_detail.get('genres', [])]
     types = []
     is_animation = 16 in [g['id'] for g in item_detail.get('genres', [])]
-    is_drama = 18 in [g['id'] for g in item_detail.get('genres', [])]
 
     if media_type == 'movie':
         types.append('Movie')
@@ -113,13 +120,10 @@ def normalize_tmdb_data(item_detail, media_type):
         else:
             types.append('Live-Action')
     elif media_type == 'tv':
-        # TV 시리즈의 경우, Live-Action 또는 Animation으로만 우선 분류
         if is_animation:
             types.append('Animation')
         else:
             types.append('Live-Action')
-
-        # '드라마' 타입은 LLM이 판단하도록 여기서 부여하지 않음
 
     trailer_key = None
     if 'videos' in item_detail and item_detail['videos']['results']:
@@ -149,7 +153,6 @@ def normalize_tmdb_data(item_detail, media_type):
     return base_data
 
 def upsert_item(cursor, connection, item_summary, media_type, api_key):
-    # ★★★ [수정] TV 시리즈 중 애니메이션은 이 스크립트에서 건너뛰도록 로직 추가 ★★★
     if media_type == 'tv' and 16 in item_summary.get('genre_ids', []):
         print(f"  [SKIP] '{item_summary.get('name')}' -> 애니메이션 TV 시리즈이므로 anilist_collector에서 처리합니다.")
         return
