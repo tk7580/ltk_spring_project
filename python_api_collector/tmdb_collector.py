@@ -1,153 +1,244 @@
-# llm_enricher.py (한글 제목, 썸네일, 줄거리 데이터 보강 스크립트)
+# tmdb_collector.py (인수 순서 통일)
 
 import os
-import time
+import requests
 import json
-from dotenv import load_dotenv, find_dotenv
 import mysql.connector
 from mysql.connector import Error
+from dotenv import load_dotenv, find_dotenv
+import time
+import argparse
 
-# --- 환경 변수 및 API 설정 ---
-load_dotenv(find_dotenv())
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    import google.generativeai as genai
-    genai.configure(api_key=GEMINI_API_KEY)
+def find_work_by_external_id(cursor, source_name, source_id):
+    query = "SELECT workId FROM work_identifier WHERE sourceName = %s AND sourceId = %s LIMIT 1"
+    cursor.execute(query, (source_name, str(source_id)))
+    result = cursor.fetchone()
+    return result[0] if result else None
 
-# --- DB Helper Functions ---
-def get_db_connection():
+def get_or_create_genre_ids(cursor, connection, genre_names):
+    genre_ids = []
+    if not genre_names: return genre_ids
+    select_query = "SELECT id FROM genre WHERE name = %s"
+    insert_query = "INSERT INTO genre (name, regDate, updateDate) VALUES (%s, NOW(), NOW())"
+    for name in genre_names:
+        cursor.execute(select_query, (name,))
+        result = cursor.fetchone()
+        if result:
+            genre_ids.append(result[0])
+        else:
+            cursor.execute(insert_query, (name,))
+            genre_ids.append(cursor.lastrowid)
+    connection.commit()
+    return genre_ids
+
+def link_genres_to_work(cursor, connection, work_id, genre_ids):
+    if not genre_ids: return
+    delete_query = "DELETE FROM work_genre WHERE workId = %s"
+    insert_query = "INSERT INTO work_genre (workId, genreId, regDate) VALUES (%s, %s, NOW())"
     try:
-        connection = mysql.connector.connect(
-            host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASSWORD'), database=os.getenv('DB_DATABASE'), port=3306)
-        if connection.is_connected():
-            return connection
+        cursor.execute(delete_query, (work_id,))
+        data_to_insert = [(work_id, genre_id) for genre_id in genre_ids]
+        cursor.executemany(insert_query, data_to_insert)
+        connection.commit()
     except Error as e:
-        print(f"DB 연결 오류: {e}")
-        return None
+        print(f"  [오류] 작품-장르 연결 중 DB 에러: {e}")
+        connection.rollback()
 
-def get_works_to_enrich(cursor, limit=20):
-    """ 한글 제목/썸네일/줄거리가 부실한 작품 목록을 가져옵니다. """
-    print(f"DB에서 보강이 필요한 작품을 {limit}개 가져옵니다...")
-    # titleKr이 원제와 같거나(한글 제목 없음), 썸네일 또는 줄거리가 없는 경우
-    query = """
-    SELECT id, titleKr, titleOriginal, description, thumbnailUrl FROM work 
-    WHERE 
-        thumbnailUrl IS NULL 
-        OR (titleKr = titleOriginal AND titleOriginal IS NOT NULL)
-        OR description IS NULL
-        OR description = ''
-    LIMIT %s
-    """
-    cursor.execute(query, (limit,))
-    return cursor.fetchall()
+def get_type_ids_from_names(cursor, type_names):
+    type_ids = []
+    if not type_names: return type_ids
+    format_strings = ','.join(['%s'] * len(type_names))
+    query = f"SELECT id FROM work_type WHERE name IN ({format_strings})"
+    cursor.execute(query, tuple(type_names))
+    results = cursor.fetchall()
+    for row in results:
+        type_ids.append(row[0])
+    return type_ids
 
-def ask_gemini_for_enrichment(title):
-    """ Gemini에게 작품의 한국어 제목, 포스터, 줄거리를 물어봅니다. """
-    if not GEMINI_API_KEY:
-        print("오류: Gemini API 키가 설정되지 않았습니다.")
-        return None
-
-    model = genai.GenerativeModel('gemini-1.5-flash-latest')
-
-    prompt = f"""
-    당신은 미디어 정보 검색 전문가입니다.
-    작품의 원제 또는 영문 제목이 '{title}' 입니다.
-    이 작품의 정보 3가지를 찾아서, 반드시 아래와 같은 JSON 형식으로만 답변해주세요.
-
-    1.  "korean_title": 이 작품의 한국어 정식 제목. 한국어 제목이 없다면 null 값을 반환해주세요.
-    2.  "poster_url": 이 작품을 대표하는 고화질 세로 포스터 이미지의 URL. 없다면 null 값을 반환해주세요.
-    3.  "korean_description": 이 작품의 공식 소개글 또는 스포일러가 없는 한국어 줄거리 요약. 없다면 null 값을 반환해주세요.
-
-    JSON 데이터:
-    """
-
+def link_types_to_work(cursor, connection, work_id, type_ids):
+    if not type_ids: return
+    delete_query = "DELETE FROM work_type_mapping WHERE workId = %s"
+    insert_query = "INSERT INTO work_type_mapping (workId, typeId, regDate) VALUES (%s, %s, NOW())"
     try:
-        response = model.generate_content(prompt)
-        json_str = response.text.strip().replace("```json", "").replace("```", "")
-        return json.loads(json_str)
+        cursor.execute(delete_query, (work_id,))
+        data_to_insert = [(work_id, type_id) for type_id in type_ids]
+        cursor.executemany(insert_query, data_to_insert)
+        connection.commit()
+    except Error as e:
+        print(f"  [오류] 작품-타입 연결 중 DB 에러: {e}")
+        connection.rollback()
+
+def find_or_create_series(cursor, connection, item_data):
+    title_kr = item_data.get('titleKr')
+    title_original = item_data.get('titleOriginal')
+
+    collection_info = item_data.get('collection')
+    if collection_info and collection_info.get('name'):
+        series_title = collection_info['name']
+        cursor.execute("SELECT id FROM series WHERE titleKr = %s OR titleOriginal = %s LIMIT 1", (series_title, series_title))
+        result = cursor.fetchone()
+        if result: return result[0]
+
+        poster_path = f"https://image.tmdb.org/t/p/w500{collection_info.get('poster_path')}" if collection_info.get('poster_path') else None
+        series_data = (series_title, series_title, None, poster_path, None, None, None, None)
+        insert_query = "INSERT INTO series (titleKr, titleOriginal, description, thumbnailUrl, coverImageUrl, author, studios, publisher, regDate, updateDate) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())"
+        cursor.execute(insert_query, series_data)
+        return cursor.lastrowid
+
+    series_data = (title_kr, title_original, item_data.get('description'), item_data.get('thumbnailUrl'), None, None, item_data.get('studios'), None)
+    insert_query = "INSERT INTO series (titleKr, titleOriginal, description, thumbnailUrl, coverImageUrl, author, studios, publisher, regDate, updateDate) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())"
+    cursor.execute(insert_query, series_data)
+    return cursor.lastrowid
+
+def get_api_data(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.json()
     except Exception as e:
-        print(f"  [오류] Gemini API 호출 또는 JSON 파싱 중 오류 발생: {e}")
+        print(f"  [오류] API 요청 실패: {url} - {e}")
         return None
+
+def normalize_tmdb_data(item_detail, media_type):
+    genres = [genre['name'] for genre in item_detail.get('genres', [])]
+    types = []
+    is_animation = 16 in [g['id'] for g in item_detail.get('genres', [])]
+    is_drama = 18 in [g['id'] for g in item_detail.get('genres', [])]
+
+    if media_type == 'movie':
+        types.append('Movie')
+        if is_animation:
+            types.append('Animation')
+        else:
+            types.append('Live-Action')
+    elif media_type == 'tv':
+        if is_animation:
+            types.append('Animation')
+        else:
+            types.append('Live-Action')
+
+        if is_drama:
+            types.append('Drama')
+
+    trailer_key = None
+    if 'videos' in item_detail and item_detail['videos']['results']:
+        for video in item_detail['videos']['results']:
+            if video.get('site') == 'YouTube' and video.get('type') == 'Trailer':
+                trailer_key = video.get('key')
+                if video.get('official'):
+                    break
+
+    trailer_url = f"https://www.youtube.com/watch?v={trailer_key}" if trailer_key else None
+
+    base_data = {
+        'id': item_detail.get('id'), 'description': item_detail.get('overview'),
+        'thumbnailUrl': f"https://image.tmdb.org/t/p/w500{item_detail.get('poster_path')}" if item_detail.get('poster_path') else None,
+        'genres': genres, 'types': types,
+        'collection': item_detail.get('belongs_to_collection'),
+        'studios': ", ".join([c['name'] for c in item_detail.get('production_companies', [])]),
+        'trailerUrl': trailer_url
+    }
+
+    if media_type == 'movie':
+        creators = ", ".join([p['name'] for p in item_detail.get('credits', {}).get('crew', []) if p.get('job') == 'Director'])
+        base_data.update({'titleKr': item_detail.get('title'), 'titleOriginal': item_detail.get('original_title'), 'releaseDate': item_detail.get('release_date') or None, 'episodes': 1, 'duration': item_detail.get('runtime'), 'creators': creators})
+    elif media_type == 'tv':
+        creators = ", ".join([p['name'] for p in item_detail.get('created_by', [])])
+        base_data.update({'titleKr': item_detail.get('name'), 'titleOriginal': item_detail.get('original_name'), 'releaseDate': item_detail.get('first_air_date') or None, 'isCompleted': item_detail.get('status') == 'Ended', 'episodes': item_detail.get('number_of_episodes'), 'duration': item_detail.get('episode_run_time')[0] if item_detail.get('episode_run_time') else None, 'creators': creators})
+    return base_data
+
+def upsert_item(cursor, connection, item_summary, media_type, api_key):
+    source_name = f"TMDB_{media_type.upper()}"
+    tmdb_id = item_summary.get('id')
+    if not tmdb_id: return None
+
+    work_id = find_work_by_external_id(cursor, source_name, tmdb_id)
+
+    detail_url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}?api_key={api_key}&language=ko-KR&append_to_response=videos,credits"
+    detail_data = get_api_data(detail_url)
+    if not detail_data: return None
+
+    normalized_data = normalize_tmdb_data(detail_data, media_type)
+
+    print("-" * 40)
+    print(f"  >> '{normalized_data.get('titleKr')}' 처리 시작")
+
+    if work_id:
+        update_query = "UPDATE work SET titleKr=%s, titleOriginal=%s, releaseDate=%s, description=%s, thumbnailUrl=%s, studios=%s, creators=%s, episodes=%s, duration=%s, isCompleted=%s, trailerUrl=%s, updateDate=NOW() WHERE id=%s"
+        params = (
+            normalized_data['titleKr'], normalized_data['titleOriginal'], normalized_data.get('releaseDate'),
+            normalized_data['description'], normalized_data['thumbnailUrl'], normalized_data['studios'],
+            normalized_data.get('creators'), normalized_data.get('episodes'), normalized_data.get('duration'),
+            normalized_data.get('isCompleted'), normalized_data.get('trailerUrl'),
+            work_id
+        )
+        cursor.execute(update_query, params)
+        print(f"  [업데이트] (workId: {work_id}) -> 정보 업데이트 완료")
+    else:
+        series_id = find_or_create_series(cursor, connection, normalized_data)
+        insert_query = "INSERT INTO work (seriesId, regDate, updateDate, titleKr, titleOriginal, releaseDate, description, thumbnailUrl, studios, creators, episodes, duration, isCompleted, trailerUrl) VALUES (%s, NOW(), NOW(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        params = (
+            series_id, normalized_data['titleKr'], normalized_data['titleOriginal'], normalized_data.get('releaseDate'),
+            normalized_data['description'], normalized_data['thumbnailUrl'], normalized_data['studios'],
+            normalized_data.get('creators'), normalized_data.get('episodes'), normalized_data.get('duration'),
+            normalized_data.get('isCompleted'), normalized_data.get('trailerUrl')
+        )
+        cursor.execute(insert_query, params)
+        work_id = cursor.lastrowid
+        cursor.execute("INSERT INTO work_identifier (workId, sourceName, sourceId, regDate, updateDate) VALUES (%s, %s, %s, NOW(), NOW())", (work_id, source_name, str(tmdb_id)))
+        print(f"  [신규 저장] (workId: {work_id}) -> work, series, identifier 저장 완료")
+
+    link_genres_to_work(cursor, connection, work_id, get_or_create_genre_ids(cursor, connection, normalized_data.get('genres', [])))
+    link_types_to_work(cursor, connection, work_id, get_type_ids_from_names(cursor, normalized_data.get('types', [])))
+    print(f"    - 장르 및 타입 정보 처리 완료: {normalized_data.get('types')}")
+
+    connection.commit()
 
 def main():
-    print("=== LLM 데이터 보강 스크립트 시작 ===")
-    connection = get_db_connection()
-    if not connection: return
+    # ★★★ [수정] 명령줄 인수 정의 순서 변경 ★★★
+    parser = argparse.ArgumentParser(description="TMDB에서 영화 및 TV 시리즈 정보를 수집합니다.")
+    parser.add_argument('--pages', type=int, default=1, help="각 목록에서 수집할 페이지 수 (페이지당 20개)")
+    parser.add_argument('--type', type=str, choices=['movie', 'tv'], help="수집할 미디어 타입 (movie 또는 tv)")
+    parser.add_argument('--endpoint', type=str, default='popular', choices=['popular', 'top_rated'], help="수집할 목록 (popular 또는 top_rated)")
+    args = parser.parse_args()
 
-    cursor = connection.cursor(dictionary=True)
+    load_dotenv(find_dotenv())
+    api_key = os.getenv('TMDB_API_KEY')
+    db_host = os.getenv('DB_HOST'); db_user = os.getenv('DB_USER'); db_password = os.getenv('DB_PASSWORD'); db_database = os.getenv('DB_DATABASE')
 
-    # ★★★ 테스트를 위해 우선 10개만 처리합니다. 늘리고 싶으면 이 숫자를 조절하세요. ★★★
-    candidates = get_works_to_enrich(cursor, limit=10)
-
-    if not candidates:
-        print("데이터 보강이 필요한 작품이 없습니다.")
-        cursor.close()
-        connection.close()
+    if not all([api_key, db_host, db_user, db_password, db_database]):
+        print("에러: .env 파일에 필요한 모든 정보(API키, DB접속정보)를 설정해주세요.")
         return
 
-    print(f"총 {len(candidates)}개의 작품에 대해 데이터 보강을 시도합니다.")
-    updated_count = 0
-
+    connection = None
     try:
-        for work in candidates:
-            work_id = work['id']
-            title_to_search = work['titleOriginal'] or work['titleKr']
+        connection = mysql.connector.connect(host=db_host, user=db_user, password=db_password, database=db_database, port=3306)
+        cursor = connection.cursor(dictionary=True, buffered=True)
+        print("데이터베이스에 성공적으로 연결되었습니다.")
 
-            print(f"\n--- [ID: {work_id}] '{title_to_search}' 처리 중 ---")
+        media_types_to_process = [args.type] if args.type else ['movie', 'tv']
 
-            enriched_data = ask_gemini_for_enrichment(title_to_search)
+        for media_type in media_types_to_process:
+            for page in range(1, args.pages + 1):
+                list_url = f"https://api.themoviedb.org/3/{media_type}/{args.endpoint}?api_key={api_key}&language=ko-KR&page={page}"
+                print(f"\n===== '{media_type.upper()}' / '{args.endpoint}' 데이터 처리 시작 (페이지: {page}) =====")
+                list_data = get_api_data(list_url)
+                if not list_data or not list_data.get('results'):
+                    print("  [정보] 목록을 가져올 수 없습니다. 다음으로 넘어갑니다.")
+                    continue
 
-            if enriched_data:
-                update_fields = []
-                update_params = []
+                print(f"  > {len(list_data['results'])}개 항목 처리 시작...")
+                for item_summary in list_data['results']:
+                    upsert_item(cursor, connection, item_summary, media_type, api_key)
+                    time.sleep(0.5)
 
-                new_title = enriched_data.get('korean_title')
-                if new_title and work['titleKr'] != new_title:
-                    update_fields.append("titleKr = %s")
-                    update_params.append(new_title)
-                    print(f"   - 한글 제목 보강: '{new_title}'")
-
-                new_thumbnail = enriched_data.get('poster_url')
-                if new_thumbnail and work['thumbnailUrl'] != new_thumbnail:
-                    update_fields.append("thumbnailUrl = %s")
-                    update_params.append(new_thumbnail)
-                    print(f"   - 썸네일 보강: URL 발견")
-
-                new_description = enriched_data.get('korean_description')
-                if new_description and (not work['description'] or work['description'] != new_description):
-                    update_fields.append("description = %s")
-                    update_params.append(new_description)
-                    print(f"   - 줄거리 보강: 내용 발견")
-
-                if update_fields:
-                    update_query = f"UPDATE work SET {', '.join(update_fields)}, updateDate = NOW() WHERE id = %s"
-                    update_params.append(work_id)
-                    cursor.execute(update_query, tuple(update_params))
-                    print(f"  [성공] ID '{work_id}'의 정보를 업데이트했습니다.")
-                    updated_count += 1
-                else:
-                    print("  [유지] 기존 정보가 최신이거나, Gemini가 유효한 정보를 제공하지 않았습니다.")
-            else:
-                print("  [실패] Gemini로부터 유효한 정보를 얻지 못했습니다.")
-
-            print("  (API 요청 제한을 위해 2초 대기...)")
-            time.sleep(2)
-
-        if updated_count > 0:
-            connection.commit()
-            print(f"\n총 {updated_count}개의 작품 정보가 성공적으로 보강되었습니다.")
-        else:
-            print("\n정보가 변경된 작품이 없습니다.")
-
-    except Exception as e:
-        print(f"작업 중 오류 발생: {e}")
-        connection.rollback()
+    except Error as e:
+        print(f"데이터베이스 작업 중 에러 발생: {e}")
     finally:
-        if connection.is_connected():
+        if connection and connection.is_connected():
             cursor.close()
             connection.close()
-            print("\n=== 스크립트 종료 ===")
+            print("\n데이터베이스 연결이 종료되었습니다.")
 
 if __name__ == "__main__":
     main()
