@@ -129,7 +129,7 @@ def process_series_from_entry_point(entry_anilist_id):
         connection.commit()
 
         for anilist_id in works_to_process_ids:
-            # ★★★ [수정] 각 시즌 처리 전에도 짧은 딜레이 추가 ★★★
+            # ★★★ [수정] 각 시즌 처리 전에도 짧은 딜레이 추가하여 429 오류 방지 ★★★
             time.sleep(1)
 
             work_id_in_db = find_work_id_by_anilist_id(cursor, anilist_id)
@@ -171,7 +171,7 @@ def process_series_from_entry_point(entry_anilist_id):
         if connection.is_connected():
             cursor.close()
             connection.close()
-            print("\nDB 연결이 종료되었습니다.")
+            print(f"\n{'='*25} [ 처리 완료 ] {'='*25}")
 
 
 if __name__ == "__main__":
