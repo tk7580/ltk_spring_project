@@ -1,3 +1,5 @@
+# tmdb_collector.py (애니메이션 TV 시리즈 Skip 기능 추가)
+
 import os
 import requests
 import json
@@ -7,15 +9,12 @@ from dotenv import load_dotenv, find_dotenv
 import time
 import argparse
 
+# (find_work_by_external_id, get_or_create_genre_ids, link_genres_to_work, get_type_ids_from_names, link_types_to_work, find_or_create_series, get_api_data 함수는 이전과 동일)
 def find_work_by_external_id(cursor, source_name, source_id):
     query = "SELECT workId FROM work_identifier WHERE sourceName = %s AND sourceId = %s LIMIT 1"
-    try:
-        cursor.execute(query, (source_name, str(source_id)))
-        result = cursor.fetchone()
-        return result[0] if result else None
-    except Error as e:
-        print(f"  [오류] 외부 ID 조회 중 DB 에러: {e}")
-        return None
+    cursor.execute(query, (source_name, str(source_id)))
+    result = cursor.fetchone()
+    return result[0] if result else None
 
 def get_or_create_genre_ids(cursor, connection, genre_names):
     genre_ids = []
@@ -105,6 +104,7 @@ def normalize_tmdb_data(item_detail, media_type):
     genres = [genre['name'] for genre in item_detail.get('genres', [])]
     types = []
     is_animation = 16 in [g['id'] for g in item_detail.get('genres', [])]
+    is_drama = 18 in [g['id'] for g in item_detail.get('genres', [])]
 
     if media_type == 'movie':
         types.append('Movie')
@@ -118,6 +118,8 @@ def normalize_tmdb_data(item_detail, media_type):
             types.append('Animation')
         else:
             types.append('Live-Action')
+
+        # '드라마' 타입은 LLM이 판단하도록 여기서 부여하지 않음
 
     trailer_key = None
     if 'videos' in item_detail and item_detail['videos']['results']:
@@ -147,6 +149,11 @@ def normalize_tmdb_data(item_detail, media_type):
     return base_data
 
 def upsert_item(cursor, connection, item_summary, media_type, api_key):
+    # ★★★ [수정] TV 시리즈 중 애니메이션은 이 스크립트에서 건너뛰도록 로직 추가 ★★★
+    if media_type == 'tv' and 16 in item_summary.get('genre_ids', []):
+        print(f"  [SKIP] '{item_summary.get('name')}' -> 애니메이션 TV 시리즈이므로 anilist_collector에서 처리합니다.")
+        return
+
     source_name = f"TMDB_{media_type.upper()}"
     tmdb_id = item_summary.get('id')
     if not tmdb_id: return None
