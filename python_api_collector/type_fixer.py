@@ -1,4 +1,4 @@
-# type_fixer.py (Gemini API 재시도 로직 추가)
+# type_fixer.py (Live-Action 작품만 대상으로 수정된 최종본)
 
 import os
 import time
@@ -25,12 +25,18 @@ def get_db_connection():
         return None
 
 def get_candidates_for_drama_fix(cursor, limit):
-    print(f"DB에서 'Drama' 타입이 아닌 작품을 {limit}개 가져옵니다...")
+    """ 'Live-Action'이면서 아직 'Drama'가 아닌 작품 목록을 가져옵니다. """
+    print(f"DB에서 'Live-Action'이면서 'Drama' 타입이 아닌 작품을 {limit}개 가져옵니다...")
+    # ★★★ [수정] 'Live-Action' 타입이 있는 작품만 가져오도록 SQL 변경 ★★★
     query = """
     SELECT w.id, w.titleKr, w.description FROM work w
-    LEFT JOIN work_type_mapping wtm ON w.id = wtm.workId
-    LEFT JOIN work_type wt ON wtm.typeId = wt.id AND wt.name = 'Drama'
-    WHERE wt.id IS NULL AND w.description IS NOT NULL AND w.description != ''
+    -- 이 작품이 Live-Action 타입인지 확인
+    JOIN work_type_mapping wtm_live ON w.id = wtm_live.workId
+    JOIN work_type wt_live ON wtm_live.typeId = wt_live.id AND wt_live.name = 'Live-Action'
+    -- 이 작품에 Drama 타입이 없는지 확인
+    LEFT JOIN work_type_mapping wtm_drama ON w.id = wtm_drama.workId AND wtm_drama.typeId = (SELECT id FROM work_type WHERE name = 'Drama')
+    WHERE wtm_drama.workId IS NULL
+    AND w.description IS NOT NULL AND w.description != ''
     LIMIT %s
     """
     cursor.execute(query, (limit,))
@@ -51,26 +57,24 @@ def ask_gemini_is_drama(work_data):
 
     판단:
     """
-    # ★★★ [수정] 재시도 로직 추가 ★★★
-    for i in range(3): # 최대 3번 재시도
+    for i in range(3):
         try:
             response = model.generate_content(prompt)
             return response.text.strip()
         except Exception as e:
-            # 429 오류인 경우에만 재시도
             if "429" in str(e):
-                delay = (i + 1) * 2  # 2초, 4초, 6초...
+                delay = (i + 1) * 2
                 print(f"  [경고] Gemini API 요청 횟수 제한 도달. {delay}초 후 재시도합니다... ({i + 1}/3)")
                 time.sleep(delay)
             else:
                 print(f"  [오류] Gemini API 호출 중 다른 오류 발생: {e}")
-                return None # 다른 종류의 오류는 즉시 실패 처리
+                return None
 
     print("  [실패] 여러 번의 재시도 후에도 작업에 실패했습니다.")
     return None
 
 def main():
-    parser = argparse.ArgumentParser(description="LLM을 이용해 작품에 'Drama' 타입을 지능적으로 부여합니다.")
+    parser = argparse.ArgumentParser(description="LLM을 이용해 'Live-Action' 작품에 'Drama' 타입을 지능적으로 부여합니다.")
     parser.add_argument('--limit', type=int, default=20, help="한 번에 처리할 작품의 최대 개수")
     args = parser.parse_args()
 
@@ -83,13 +87,6 @@ def main():
 
     if not candidates:
         print("타입을 교정할 후보 작품이 없습니다.")
-        # ... (이하 로직은 동일)
-    # ... (생략)
-
-    # 이 아래 main 함수의 나머지 부분은 이전과 완전히 동일합니다.
-    # 이 파일을 직접 실행하시면 됩니다.
-    if not candidates:
-        print("타입을 교정할 후보 작품이 없습니다.")
         cursor.close()
         connection.close()
         return
@@ -100,6 +97,8 @@ def main():
     result = cursor.fetchone()
     if not result:
         print("오류: work_type 테이블에 'Drama' 타입이 없습니다.")
+        cursor.close()
+        connection.close()
         return
     drama_type_id = result['id']
 
@@ -110,16 +109,14 @@ def main():
             judgment = ask_gemini_is_drama(work)
 
             if judgment == 'Drama':
+                print(f"  -> Gemini 판단: 'Drama' -> 타입 추가")
                 insert_query = "INSERT IGNORE INTO work_type_mapping (workId, typeId, regDate) VALUES (%s, %s, NOW())"
                 cursor.execute(insert_query, (work['id'], drama_type_id))
                 if cursor.rowcount > 0:
-                    print(f"  [성공] ID '{work['id']}'에 'Drama' 타입을 추가했습니다.")
                     updated_count += 1
-                else:
-                    print("  [유지] 이미 'Drama' 타입이 있거나 추가에 실패했습니다.")
-            elif judgment: # 'Non-Drama' 또는 다른 답변일 경우
-                print("  [유지] 타입 변경 없음.")
-            else: # None일 경우 (API 호출 실패)
+            elif judgment:
+                print(f"  -> Gemini 판단: '{judgment}' -> 타입 변경 없음")
+            else:
                 print("  [실패] Gemini로부터 유효한 정보를 얻지 못했습니다.")
 
         if updated_count > 0:
