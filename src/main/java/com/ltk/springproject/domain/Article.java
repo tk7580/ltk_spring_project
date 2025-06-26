@@ -19,26 +19,26 @@ public class Article {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // ===== 모든 컬럼명을 camelCase로 수정 =====
-    @Column(name = "regDate")
+    @Column(name = "regDate", nullable = false, updatable = false)
     private LocalDateTime regDate;
 
-    @Column(name = "updateDate")
+    @Column(name = "updateDate", nullable = false)
     private LocalDateTime updateDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "memberId")
     private Member member;
 
+    // ★★★ [수정] Series 와의 관계를 Work 와의 관계로 변경 ★★★
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "seriesId")
-    private Series series;
+    @JoinColumn(name = "workId")
+    private Work work;
 
     @Column(name = "title")
     private String title;
 
     @Lob
-    @Column(name = "body")
+    @Column(name = "body", columnDefinition = "TEXT")
     private String body;
 
     @Column(name = "hitCount")
@@ -49,7 +49,6 @@ public class Article {
 
     @Column(name = "badReactionPoint")
     private Integer badReactionPoint;
-    // =====================================
 
     @OneToMany(mappedBy = "article", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

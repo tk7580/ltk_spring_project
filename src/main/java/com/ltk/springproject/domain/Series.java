@@ -2,6 +2,7 @@ package com.ltk.springproject.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,11 +32,9 @@ public class Series {
     @Column(name = "titleOriginal")
     private String titleOriginal;
 
-    // ===== 이 부분을 수정합니다 =====
     @Lob
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
-    // ============================
 
     @Column(name = "thumbnailUrl")
     private String thumbnailUrl;
@@ -46,13 +45,15 @@ public class Series {
     @Column(name = "author")
     private String author;
 
-    @OneToMany(mappedBy = "series", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<Work> works = new ArrayList<>();
+    @Column(name = "publisher")
+    private String publisher;
+
+    @Column(name = "studios")
+    private String studios;
 
     @OneToMany(mappedBy = "series", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<Article> articles = new ArrayList<>();
+    private List<Work> works = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
