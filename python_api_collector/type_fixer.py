@@ -1,6 +1,7 @@
+# type_fixer.py (Gemini API 재시도 로직 추가)
+
 import os
 import time
-import json
 import argparse
 from dotenv import load_dotenv, find_dotenv
 import mysql.connector
@@ -50,12 +51,23 @@ def ask_gemini_is_drama(work_data):
 
     판단:
     """
-    try:
-        response = model.generate_content(prompt)
-        return response.text.strip()
-    except Exception as e:
-        print(f"Gemini API 호출 중 오류 발생: {e}")
-        return None
+    # ★★★ [수정] 재시도 로직 추가 ★★★
+    for i in range(3): # 최대 3번 재시도
+        try:
+            response = model.generate_content(prompt)
+            return response.text.strip()
+        except Exception as e:
+            # 429 오류인 경우에만 재시도
+            if "429" in str(e):
+                delay = (i + 1) * 2  # 2초, 4초, 6초...
+                print(f"  [경고] Gemini API 요청 횟수 제한 도달. {delay}초 후 재시도합니다... ({i + 1}/3)")
+                time.sleep(delay)
+            else:
+                print(f"  [오류] Gemini API 호출 중 다른 오류 발생: {e}")
+                return None # 다른 종류의 오류는 즉시 실패 처리
+
+    print("  [실패] 여러 번의 재시도 후에도 작업에 실패했습니다.")
+    return None
 
 def main():
     parser = argparse.ArgumentParser(description="LLM을 이용해 작품에 'Drama' 타입을 지능적으로 부여합니다.")
@@ -67,9 +79,15 @@ def main():
     if not connection: return
 
     cursor = connection.cursor(dictionary=True)
-
     candidates = get_candidates_for_drama_fix(cursor, limit=args.limit)
 
+    if not candidates:
+        print("타입을 교정할 후보 작품이 없습니다.")
+        # ... (이하 로직은 동일)
+    # ... (생략)
+
+    # 이 아래 main 함수의 나머지 부분은 이전과 완전히 동일합니다.
+    # 이 파일을 직접 실행하시면 됩니다.
     if not candidates:
         print("타입을 교정할 후보 작품이 없습니다.")
         cursor.close()
@@ -90,7 +108,6 @@ def main():
         for work in candidates:
             print(f"\n--- [ID: {work['id']}] '{work['titleKr']}' 처리 중 ---")
             judgment = ask_gemini_is_drama(work)
-            print(f"  -> Gemini 판단: '{judgment}'")
 
             if judgment == 'Drama':
                 insert_query = "INSERT IGNORE INTO work_type_mapping (workId, typeId, regDate) VALUES (%s, %s, NOW())"
@@ -100,11 +117,10 @@ def main():
                     updated_count += 1
                 else:
                     print("  [유지] 이미 'Drama' 타입이 있거나 추가에 실패했습니다.")
-            else:
+            elif judgment: # 'Non-Drama' 또는 다른 답변일 경우
                 print("  [유지] 타입 변경 없음.")
-
-            print("  (API 요청 제한을 위해 2초 대기...)")
-            time.sleep(2)
+            else: # None일 경우 (API 호출 실패)
+                print("  [실패] Gemini로부터 유효한 정보를 얻지 못했습니다.")
 
         if updated_count > 0:
             connection.commit()

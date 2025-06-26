@@ -1,3 +1,5 @@
+# llm_enricher.py (Gemini API 재시도 로직 추가)
+
 import os
 import time
 import json
@@ -24,7 +26,6 @@ def get_db_connection():
         return None
 
 def get_works_to_enrich(cursor, limit):
-    """ 한글 제목/썸네일/줄거리가 부실한 작품 목록을 가져옵니다. """
     print(f"DB에서 보강이 필요한 작품을 {limit}개 가져옵니다...")
     query = """
     SELECT id, titleKr, titleOriginal, description, thumbnailUrl FROM work 
@@ -39,7 +40,6 @@ def get_works_to_enrich(cursor, limit):
     return cursor.fetchall()
 
 def ask_gemini_for_enrichment(title):
-    """ Gemini에게 작품의 한국어 제목, 포스터, 줄거리를 물어봅니다. """
     if not GEMINI_API_KEY:
         print("오류: Gemini API 키가 설정되지 않았습니다.")
         return None
@@ -57,13 +57,23 @@ def ask_gemini_for_enrichment(title):
     JSON 데이터:
     """
 
-    try:
-        response = model.generate_content(prompt)
-        json_str = response.text.strip().replace("```json", "").replace("```", "")
-        return json.loads(json_str)
-    except Exception as e:
-        print(f"  [오류] Gemini API 호출 또는 JSON 파싱 중 오류 발생: {e}")
-        return None
+    # ★★★ [수정] 재시도 로직 추가 ★★★
+    for i in range(3): # 최대 3번 재시도
+        try:
+            response = model.generate_content(prompt)
+            json_str = response.text.strip().replace("```json", "").replace("```", "")
+            return json.loads(json_str)
+        except Exception as e:
+            if "429" in str(e):
+                delay = (i + 1) * 2
+                print(f"  [경고] Gemini API 요청 횟수 제한 도달. {delay}초 후 재시도합니다... ({i + 1}/3)")
+                time.sleep(delay)
+            else:
+                print(f"  [오류] Gemini API 호출 또는 JSON 파싱 중 오류 발생: {e}")
+                return None
+
+    print("  [실패] 여러 번의 재시도 후에도 작업에 실패했습니다.")
+    return None
 
 def main():
     parser = argparse.ArgumentParser(description="LLM을 이용해 작품의 누락된 정보(한글 제목, 썸네일 등)를 보강합니다.")
@@ -78,6 +88,8 @@ def main():
 
     candidates = get_works_to_enrich(cursor, limit=args.limit)
 
+    # 이 아래 main 함수의 나머지 부분은 이전과 완전히 동일합니다.
+    # 이 파일을 직접 실행하시면 됩니다.
     if not candidates:
         print("데이터 보강이 필요한 작품이 없습니다.")
         cursor.close()
@@ -128,9 +140,6 @@ def main():
                     print("  [유지] 기존 정보가 최신이거나, Gemini가 유효한 정보를 제공하지 않았습니다.")
             else:
                 print("  [실패] Gemini로부터 유효한 정보를 얻지 못했습니다.")
-
-            print("  (API 요청 제한을 위해 2초 대기...)")
-            time.sleep(2)
 
         if updated_count > 0:
             connection.commit()
