@@ -6,8 +6,7 @@ DATABASE `ltk-spring-project`;
 USE
 `ltk-spring-project`;
 
--- 테이블 생성
-
+-- ======== 기존 테이블 생성 ========
 CREATE TABLE `member`
 (
     `id`           BIGINT    NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -40,17 +39,6 @@ CREATE TABLE `series`
     `publisher`     VARCHAR(100),
     `studios`       VARCHAR(255)
 );
-CREATE TABLE `board`
-(
-    `id`         BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `regDate`    DATETIME NOT NULL,
-    `updateDate` DATETIME NOT NULL,
-    `code`       CHAR(50) NOT NULL UNIQUE,
-    `name`       CHAR(20) NOT NULL UNIQUE,
-    `delStatus`  TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
-    `delDate`    DATETIME
-);
-
 CREATE TABLE `work`
 (
     `id`               BIGINT        NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -65,7 +53,7 @@ CREATE TABLE `work`
     `averageRating`    DECIMAL(4, 2) NOT NULL DEFAULT 0.00,
     `ratingCount`      INT UNSIGNED NOT NULL DEFAULT 0,
     `episodes`         INT UNSIGNED,
-    `duration`         INT UNSIGNED COMMENT '회당 분량 (분 단위)',
+    `duration`         INT UNSIGNED,
     `creators`         VARCHAR(255),
     `studios`          VARCHAR(255),
     `releaseSequence`  INT UNSIGNED,
@@ -76,15 +64,13 @@ CREATE TABLE `work`
     `trailerUrl`       VARCHAR(255),
     FOREIGN KEY (`seriesId`) REFERENCES `series` (`id`) ON DELETE CASCADE
 );
-
 CREATE TABLE `work_type`
 (
     `id`         BIGINT      NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `regDate`    DATETIME    NOT NULL,
     `updateDate` DATETIME    NOT NULL,
-    `name`       VARCHAR(50) NOT NULL UNIQUE COMMENT '타입명 (예: Movie, Animation)'
+    `name`       VARCHAR(50) NOT NULL UNIQUE
 );
-
 CREATE TABLE `work_type_mapping`
 (
     `id`      BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -94,106 +80,6 @@ CREATE TABLE `work_type_mapping`
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
     FOREIGN KEY (`typeId`) REFERENCES `work_type` (`id`) ON DELETE CASCADE,
     UNIQUE KEY `UK_workId_typeId` (`workId`, `typeId`)
-);
-
-CREATE TABLE `article`
-(
-    `id`                BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `regDate`           DATETIME     NOT NULL,
-    `updateDate`        DATETIME     NOT NULL,
-    `memberId`          BIGINT       NOT NULL,
-    `workId`            BIGINT       NOT NULL,
-    `title`             VARCHAR(255) NOT NULL,
-    `body`              TEXT         NOT NULL,
-    `hitCount`          INT UNSIGNED NOT NULL DEFAULT 0,
-    `goodReactionPoint` INT UNSIGNED NOT NULL DEFAULT 0,
-    `badReactionPoint`  INT UNSIGNED NOT NULL DEFAULT 0,
-    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE
-);
-CREATE TABLE `reply`
-(
-    `id`                BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `regDate`           DATETIME NOT NULL,
-    `updateDate`        DATETIME NOT NULL,
-    `memberId`          BIGINT   NOT NULL,
-    `relTypeCode`       CHAR(50) NOT NULL,
-    `relId`             BIGINT   NOT NULL,
-    `parentId`          BIGINT,
-    `body`              TEXT     NOT NULL,
-    `goodReactionPoint` INT UNSIGNED NOT NULL DEFAULT 0,
-    `badReactionPoint`  INT UNSIGNED NOT NULL DEFAULT 0,
-    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`relId`) REFERENCES `article` (`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`parentId`) REFERENCES `reply` (`id`) ON DELETE CASCADE
-);
-CREATE TABLE `reactionPoint`
-(
-    `id`           BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `regDate`      DATETIME NOT NULL,
-    `updateDate`   DATETIME NOT NULL,
-    `memberId`     BIGINT   NOT NULL,
-    `relTypeCode`  CHAR(50) NOT NULL,
-    `relId`        BIGINT   NOT NULL,
-    `reactionType` CHAR(10) NOT NULL,
-    `point`        INT      NOT NULL,
-    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE
-);
-CREATE TABLE `conpro`
-(
-    `id`             BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `workId`         BIGINT       NOT NULL,
-    `providerType`   VARCHAR(50)  NOT NULL,
-    `providerName`   VARCHAR(100) NOT NULL,
-    `contentUrl`     VARCHAR(255),
-    `appScheme`      VARCHAR(255),
-    `additionalInfo` TEXT,
-    FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE
-);
-CREATE TABLE `memberWishlistWork`
-(
-    `id`       BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `regDate`  DATETIME NOT NULL,
-    `memberId` BIGINT   NOT NULL,
-    `workId`   BIGINT   NOT NULL,
-    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
-    UNIQUE KEY (`memberId`, `workId`)
-);
-CREATE TABLE `memberWatchedWork`
-(
-    `id`          BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `regDate`     DATETIME NOT NULL,
-    `updateDate`  DATETIME NOT NULL,
-    `memberId`    BIGINT   NOT NULL,
-    `workId`      BIGINT   NOT NULL,
-    `watchedDate` DATE NULL,
-    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
-    UNIQUE KEY (`memberId`, `workId`)
-);
-CREATE TABLE `memberWorkRating`
-(
-    `id`         BIGINT        NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `regDate`    DATETIME      NOT NULL,
-    `updateDate` DATETIME      NOT NULL,
-    `memberId`   BIGINT        NOT NULL,
-    `workId`     BIGINT        NOT NULL,
-    `score`      DECIMAL(3, 1) NOT NULL,
-    `comment`    TEXT NULL,
-    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
-    UNIQUE KEY (`memberId`, `workId`)
-);
-CREATE TABLE `memberWishlistSeries`
-(
-    `id`       BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `regDate`  DATETIME NOT NULL,
-    `memberId` BIGINT   NOT NULL,
-    `seriesId` BIGINT   NOT NULL,
-    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`seriesId`) REFERENCES `series` (`id`) ON DELETE CASCADE,
-    UNIQUE KEY (`memberId`, `seriesId`)
 );
 CREATE TABLE `work_identifier`
 (
@@ -243,25 +129,128 @@ CREATE TABLE `viewing_guide_item`
     FOREIGN KEY (`guideId`) REFERENCES `viewing_guide` (`id`) ON DELETE CASCADE,
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE
 );
+CREATE TABLE `memberWishlistWork`
+(
+    `id`       BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`  DATETIME NOT NULL,
+    `memberId` BIGINT   NOT NULL,
+    `workId`   BIGINT   NOT NULL,
+    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
+    UNIQUE KEY (`memberId`, `workId`)
+);
+CREATE TABLE `memberWatchedWork`
+(
+    `id`          BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`     DATETIME NOT NULL,
+    `updateDate`  DATETIME NOT NULL,
+    `memberId`    BIGINT   NOT NULL,
+    `workId`      BIGINT   NOT NULL,
+    `watchedDate` DATE NULL,
+    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
+    UNIQUE KEY (`memberId`, `workId`)
+);
+CREATE TABLE `memberWorkRating`
+(
+    `id`         BIGINT        NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`    DATETIME      NOT NULL,
+    `updateDate` DATETIME      NOT NULL,
+    `memberId`   BIGINT        NOT NULL,
+    `workId`     BIGINT        NOT NULL,
+    `score`      DECIMAL(3, 1) NOT NULL,
+    `comment`    TEXT NULL,
+    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE,
+    UNIQUE KEY (`memberId`, `workId`)
+);
+CREATE TABLE `memberWishlistSeries`
+(
+    `id`       BIGINT   NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`  DATETIME NOT NULL,
+    `memberId` BIGINT   NOT NULL,
+    `seriesId` BIGINT   NOT NULL,
+    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`seriesId`) REFERENCES `series` (`id`) ON DELETE CASCADE,
+    UNIQUE KEY (`memberId`, `seriesId`)
+);
+CREATE TABLE `conpro`
+(
+    `id`             BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `workId`         BIGINT       NOT NULL,
+    `providerType`   VARCHAR(50)  NOT NULL,
+    `providerName`   VARCHAR(100) NOT NULL,
+    `contentUrl`     VARCHAR(255),
+    `appScheme`      VARCHAR(255),
+    `additionalInfo` TEXT,
+    FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE
+);
+
+-- ======== [수정/신규] 게시판 관련 테이블 생성 ========
+CREATE TABLE `board`
+(
+    `id`         BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`    DATETIME     NOT NULL,
+    `updateDate` DATETIME     NOT NULL,
+    `seriesId`   BIGINT       NOT NULL UNIQUE COMMENT '시리즈와 1:1 관계',
+    `name`       VARCHAR(255) NOT NULL COMMENT '게시판 이름',
+    `code`       CHAR(50)     NOT NULL UNIQUE COMMENT '게시판 코드',
+    FOREIGN KEY (`seriesId`) REFERENCES `series` (`id`) ON DELETE CASCADE
+);
+
+CREATE TABLE `article`
+(
+    `id`                BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`           DATETIME     NOT NULL,
+    `updateDate`        DATETIME     NOT NULL,
+    `memberId`          BIGINT       NOT NULL,
+    `boardId`           BIGINT       NOT NULL COMMENT '게시판 ID',
+    `title`             VARCHAR(255) NOT NULL,
+    `body`              TEXT         NOT NULL,
+    `hitCount`          INT UNSIGNED    NOT NULL DEFAULT 0,
+    `goodReactionPoint` INT UNSIGNED    NOT NULL DEFAULT 0,
+    `badReactionPoint`  INT UNSIGNED    NOT NULL DEFAULT 0,
+    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`boardId`) REFERENCES `board` (`id`) ON DELETE CASCADE
+);
+
+CREATE TABLE `reply`
+(
+    `id`                BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`           DATETIME NOT NULL,
+    `updateDate`        DATETIME NOT NULL,
+    `memberId`          BIGINT   NOT NULL,
+    `relTypeCode`       CHAR(50) NOT NULL COMMENT '관련 타입 (article)',
+    `relId`             BIGINT UNSIGNED NOT NULL COMMENT '게시글 ID',
+    `parentId`          BIGINT UNSIGNED COMMENT '부모 댓글 ID',
+    `body`              TEXT     NOT NULL,
+    `goodReactionPoint` INT UNSIGNED    NOT NULL DEFAULT 0,
+    `badReactionPoint`  INT UNSIGNED    NOT NULL DEFAULT 0,
+    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`relId`) REFERENCES `article` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`parentId`) REFERENCES `reply` (`id`) ON DELETE CASCADE
+);
+
+CREATE TABLE `reactionPoint`
+(
+    `id`           BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`      DATETIME NOT NULL,
+    `updateDate`   DATETIME NOT NULL,
+    `memberId`     BIGINT   NOT NULL,
+    `relTypeCode`  CHAR(50) NOT NULL COMMENT '관련 타입 (article, reply)',
+    `relId`        BIGINT   NOT NULL,
+    `reactionType` CHAR(10) NOT NULL COMMENT '반응 종류 (GOOD, BAD)',
+    `point`        INT      NOT NULL,
+    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE
+);
 
 
--- work_type 마스터 테이블에 최종 확정된 기본 타입 데이터 추가
+-- ======== 초기 데이터 추가 ========
 INSERT INTO `work_type` (`regDate`, `updateDate`, `name`)
 VALUES (NOW(), NOW(), 'Movie'),
        (NOW(), NOW(), 'Drama'),
        (NOW(), NOW(), 'Animation'),
        (NOW(), NOW(), 'Live-Action');
-
--- 관리자 계정 추가
-INSERT INTO `member`
-(regDate, updateDate, loginId, loginPw, authLevel, `name`, nickname, cellphoneNum, email, delStatus)
-VALUES (NOW(),
-        NOW(),
-        'admin',
-        '$2a$10$N.x2nE0r2e.2G5.8iG5.8u7a2L6E2o3W8a6L2G5.8iG5.8u7a2L6E2o',
-        7,
-        'admin',
-        'admin',
-        'admin',
-        'admin@admin.com',
-        0);
+INSERT INTO `member` (regDate, updateDate, loginId, loginPw, authLevel, `name`, nickname, cellphoneNum, email)
+VALUES (NOW(), NOW(), 'admin', '$2a$10$N.x2nE0r2e.2G5.8iG5.8u7a2L6E2o3W8a6L2G5.8iG5.8u7a2L6E2o', 7, 'admin', 'admin',
+        'admin', 'admin@admin.com');
