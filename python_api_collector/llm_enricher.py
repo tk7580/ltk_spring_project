@@ -1,5 +1,3 @@
-# llm_enricher.py (한글 제목, 썸네일, 줄거리 데이터 보강 스크립트)
-
 import os
 import time
 import json
@@ -7,14 +5,12 @@ from dotenv import load_dotenv, find_dotenv
 import mysql.connector
 from mysql.connector import Error
 
-# --- 환경 변수 및 API 설정 ---
 load_dotenv(find_dotenv())
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     import google.generativeai as genai
     genai.configure(api_key=GEMINI_API_KEY)
 
-# --- DB Helper Functions ---
 def get_db_connection():
     try:
         connection = mysql.connector.connect(
@@ -26,10 +22,9 @@ def get_db_connection():
         print(f"DB 연결 오류: {e}")
         return None
 
-def get_works_to_enrich(cursor, limit=20):
+def get_works_to_enrich(cursor, limit=10):
     """ 한글 제목/썸네일/줄거리가 부실한 작품 목록을 가져옵니다. """
     print(f"DB에서 보강이 필요한 작품을 {limit}개 가져옵니다...")
-    # titleKr이 원제와 같거나(한글 제목 없음), 썸네일 또는 줄거리가 없는 경우
     query = """
     SELECT id, titleKr, titleOriginal, description, thumbnailUrl FROM work 
     WHERE 
@@ -49,13 +44,12 @@ def ask_gemini_for_enrichment(title):
         return None
 
     model = genai.GenerativeModel('gemini-1.5-flash-latest')
-
     prompt = f"""
     당신은 미디어 정보 검색 전문가입니다.
     작품의 원제 또는 영문 제목이 '{title}' 입니다.
     이 작품의 정보 3가지를 찾아서, 반드시 아래와 같은 JSON 형식으로만 답변해주세요.
 
-    1.  "korean_title": 이 작품의 한국어 정식 제목. 한국어 제목이 없다면 null 값을 반환해주세요.
+    1.  "korean_title": 이 작품의 한국 정식 제목. 한국어 제목이 없다면 null 값을 반환해주세요.
     2.  "poster_url": 이 작품을 대표하는 고화질 세로 포스터 이미지의 URL. 없다면 null 값을 반환해주세요.
     3.  "korean_description": 이 작품의 공식 소개글 또는 스포일러가 없는 한국어 줄거리 요약. 없다면 null 값을 반환해주세요.
 
@@ -77,8 +71,8 @@ def main():
 
     cursor = connection.cursor(dictionary=True)
 
-    # ★★★ 테스트를 위해 우선 10개만 처리합니다. 늘리고 싶으면 이 숫자를 조절하세요. ★★★
-    candidates = get_works_to_enrich(cursor, limit=10)
+    PROCESS_LIMIT = 10
+    candidates = get_works_to_enrich(cursor, limit=PROCESS_LIMIT)
 
     if not candidates:
         print("데이터 보강이 필요한 작품이 없습니다.")
@@ -148,6 +142,7 @@ def main():
             cursor.close()
             connection.close()
             print("\n=== 스크립트 종료 ===")
+
 
 if __name__ == "__main__":
     main()

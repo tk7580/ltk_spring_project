@@ -1,5 +1,3 @@
-# data_reconciler.py (다대다 타입 구조 대응 최종본)
-
 import os
 import requests
 import json
@@ -106,14 +104,12 @@ def link_types_to_work(cursor, connection, work_id, type_ids):
 
 def determine_types_from_anilist(anilist_data):
     types = {'Animation'}
-
     anilist_format = anilist_data.get('format')
     if anilist_format == 'MOVIE':
         types.add('Movie')
-
-    if 'Drama' in anilist_data.get('genres', []):
-        types.add('Drama')
-
+    elif anilist_format in ['TV', 'TV_SHORT', 'OVA', 'ONA', 'SPECIAL']:
+        # 'Drama' 타입은 LLM이 판단하도록 여기서 부여하지 않음
+        pass
     return list(types)
 
 def process_series_from_entry_point(entry_anilist_id):
@@ -175,6 +171,5 @@ def process_series_from_entry_point(entry_anilist_id):
             connection.close()
             print("\nDB 연결이 종료되었습니다.")
 
-
 if __name__ == "__main__":
-    process_series_from_entry_point(21459) # 나의 히어로 아카데미아
+    process_series_from_entry_point(21459)

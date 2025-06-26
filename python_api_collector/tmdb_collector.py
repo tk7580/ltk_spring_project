@@ -1,5 +1,3 @@
-# tmdb_collector.py (인수 순서 통일)
-
 import os
 import requests
 import json
@@ -11,9 +9,13 @@ import argparse
 
 def find_work_by_external_id(cursor, source_name, source_id):
     query = "SELECT workId FROM work_identifier WHERE sourceName = %s AND sourceId = %s LIMIT 1"
-    cursor.execute(query, (source_name, str(source_id)))
-    result = cursor.fetchone()
-    return result[0] if result else None
+    try:
+        cursor.execute(query, (source_name, str(source_id)))
+        result = cursor.fetchone()
+        return result[0] if result else None
+    except Error as e:
+        print(f"  [오류] 외부 ID 조회 중 DB 에러: {e}")
+        return None
 
 def get_or_create_genre_ids(cursor, connection, genre_names):
     genre_ids = []
@@ -103,7 +105,6 @@ def normalize_tmdb_data(item_detail, media_type):
     genres = [genre['name'] for genre in item_detail.get('genres', [])]
     types = []
     is_animation = 16 in [g['id'] for g in item_detail.get('genres', [])]
-    is_drama = 18 in [g['id'] for g in item_detail.get('genres', [])]
 
     if media_type == 'movie':
         types.append('Movie')
@@ -112,13 +113,11 @@ def normalize_tmdb_data(item_detail, media_type):
         else:
             types.append('Live-Action')
     elif media_type == 'tv':
+        # TV 시리즈의 경우, Live-Action 또는 Animation으로만 우선 분류
         if is_animation:
             types.append('Animation')
         else:
             types.append('Live-Action')
-
-        if is_drama:
-            types.append('Drama')
 
     trailer_key = None
     if 'videos' in item_detail and item_detail['videos']['results']:
@@ -152,8 +151,6 @@ def upsert_item(cursor, connection, item_summary, media_type, api_key):
     tmdb_id = item_summary.get('id')
     if not tmdb_id: return None
 
-    work_id = find_work_by_external_id(cursor, source_name, tmdb_id)
-
     detail_url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}?api_key={api_key}&language=ko-KR&append_to_response=videos,credits"
     detail_data = get_api_data(detail_url)
     if not detail_data: return None
@@ -162,6 +159,8 @@ def upsert_item(cursor, connection, item_summary, media_type, api_key):
 
     print("-" * 40)
     print(f"  >> '{normalized_data.get('titleKr')}' 처리 시작")
+
+    work_id = find_work_by_external_id(cursor, source_name, tmdb_id)
 
     if work_id:
         update_query = "UPDATE work SET titleKr=%s, titleOriginal=%s, releaseDate=%s, description=%s, thumbnailUrl=%s, studios=%s, creators=%s, episodes=%s, duration=%s, isCompleted=%s, trailerUrl=%s, updateDate=NOW() WHERE id=%s"
@@ -190,12 +189,11 @@ def upsert_item(cursor, connection, item_summary, media_type, api_key):
 
     link_genres_to_work(cursor, connection, work_id, get_or_create_genre_ids(cursor, connection, normalized_data.get('genres', [])))
     link_types_to_work(cursor, connection, work_id, get_type_ids_from_names(cursor, normalized_data.get('types', [])))
-    print(f"    - 장르 및 타입 정보 처리 완료: {normalized_data.get('types')}")
+    print(f"    - 타입 및 장르 정보 처리 완료: {normalized_data.get('types')}")
 
     connection.commit()
 
 def main():
-    # ★★★ [수정] 명령줄 인수 정의 순서 변경 ★★★
     parser = argparse.ArgumentParser(description="TMDB에서 영화 및 TV 시리즈 정보를 수집합니다.")
     parser.add_argument('--pages', type=int, default=1, help="각 목록에서 수집할 페이지 수 (페이지당 20개)")
     parser.add_argument('--type', type=str, choices=['movie', 'tv'], help="수집할 미디어 타입 (movie 또는 tv)")
