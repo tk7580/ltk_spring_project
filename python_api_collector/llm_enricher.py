@@ -1,21 +1,17 @@
-# llm_enricher.py (명령줄 인수 기능 추가)
-
 import os
 import time
 import json
-import argparse # ★★★ argparse 라이브러리 임포트 ★★★
+import argparse
 from dotenv import load_dotenv, find_dotenv
 import mysql.connector
 from mysql.connector import Error
 
-# --- 환경 변수 및 API 설정 ---
 load_dotenv(find_dotenv())
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     import google.generativeai as genai
     genai.configure(api_key=GEMINI_API_KEY)
 
-# --- DB Helper Functions ---
 def get_db_connection():
     try:
         connection = mysql.connector.connect(
@@ -70,7 +66,6 @@ def ask_gemini_for_enrichment(title):
         return None
 
 def main():
-    # ★★★ [수정] 명령줄 인수 파서 설정 ★★★
     parser = argparse.ArgumentParser(description="LLM을 이용해 작품의 누락된 정보(한글 제목, 썸네일 등)를 보강합니다.")
     parser.add_argument('--limit', type=int, default=10, help="한 번에 처리할 작품의 최대 개수")
     args = parser.parse_args()
@@ -81,7 +76,6 @@ def main():
 
     cursor = connection.cursor(dictionary=True)
 
-    # ★★★ [수정] 하드코딩된 변수 대신 args.limit 사용 ★★★
     candidates = get_works_to_enrich(cursor, limit=args.limit)
 
     if not candidates:
@@ -128,7 +122,7 @@ def main():
                     update_query = f"UPDATE work SET {', '.join(update_fields)}, updateDate = NOW() WHERE id = %s"
                     update_params.append(work_id)
                     cursor.execute(update_query, tuple(update_params))
-                    print(f"  [성공] ID '{work_id}'의 정보를 업데이트했습니다.")
+                    print(f"  [성공] ID '{work['id']}'의 정보를 업데이트했습니다.")
                     updated_count += 1
                 else:
                     print("  [유지] 기존 정보가 최신이거나, Gemini가 유효한 정보를 제공하지 않았습니다.")

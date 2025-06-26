@@ -1,3 +1,5 @@
+# data_reconciler.py (429 오류 및 KeyError 모두 수정한 최종본)
+
 import os
 import requests
 import json
@@ -86,7 +88,7 @@ def get_type_ids_from_names(cursor, type_names):
     cursor.execute(query, tuple(type_names))
     results = cursor.fetchall()
     for row in results:
-        type_ids.append(row[0])
+        type_ids.append(row['id'])
     return type_ids
 
 def link_types_to_work(cursor, connection, work_id, type_ids):
@@ -107,9 +109,6 @@ def determine_types_from_anilist(anilist_data):
     anilist_format = anilist_data.get('format')
     if anilist_format == 'MOVIE':
         types.add('Movie')
-    elif anilist_format in ['TV', 'TV_SHORT', 'OVA', 'ONA', 'SPECIAL']:
-        # 'Drama' 타입은 LLM이 판단하도록 여기서 부여하지 않음
-        pass
     return list(types)
 
 def process_series_from_entry_point(entry_anilist_id):
@@ -130,6 +129,9 @@ def process_series_from_entry_point(entry_anilist_id):
         connection.commit()
 
         for anilist_id in works_to_process_ids:
+            # ★★★ [수정] 각 시즌 처리 전에도 짧은 딜레이 추가 ★★★
+            time.sleep(1)
+
             work_id_in_db = find_work_id_by_anilist_id(cursor, anilist_id)
             details = get_full_details_from_anilist(anilist_id)
             title_kr = details['title']['english'] or details['title']['romaji']
@@ -170,6 +172,7 @@ def process_series_from_entry_point(entry_anilist_id):
             cursor.close()
             connection.close()
             print("\nDB 연결이 종료되었습니다.")
+
 
 if __name__ == "__main__":
     process_series_from_entry_point(21459)

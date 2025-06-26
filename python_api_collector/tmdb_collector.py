@@ -11,14 +11,9 @@ import argparse
 
 def find_work_by_external_id(cursor, source_name, source_id):
     query = "SELECT workId FROM work_identifier WHERE sourceName = %s AND sourceId = %s LIMIT 1"
-    try:
-        cursor.execute(query, (source_name, str(source_id)))
-        result = cursor.fetchone()
-        # ★★★ [수정] result[0] -> result['workId']
-        return result['workId'] if result else None
-    except Error as e:
-        print(f"  [오류] 외부 ID 조회 중 DB 에러: {e}")
-        return None
+    cursor.execute(query, (source_name, str(source_id)))
+    result = cursor.fetchone()
+    return result['workId'] if result else None
 
 def get_or_create_genre_ids(cursor, connection, genre_names):
     genre_ids = []
@@ -29,7 +24,6 @@ def get_or_create_genre_ids(cursor, connection, genre_names):
         cursor.execute(select_query, (name,))
         result = cursor.fetchone()
         if result:
-            # ★★★ [수정] result[0] -> result['id']
             genre_ids.append(result['id'])
         else:
             cursor.execute(insert_query, (name,))
@@ -58,7 +52,6 @@ def get_type_ids_from_names(cursor, type_names):
     cursor.execute(query, tuple(type_names))
     results = cursor.fetchall()
     for row in results:
-        # ★★★ [수정] row[0] -> row['id']
         type_ids.append(row['id'])
     return type_ids
 
@@ -85,7 +78,6 @@ def find_or_create_series(cursor, connection, item_data):
         cursor.execute("SELECT id FROM series WHERE titleKr = %s OR titleOriginal = %s LIMIT 1", (series_title, series_title))
         result = cursor.fetchone()
         if result:
-            # ★★★ [수정] result[0] -> result['id']
             return result['id']
 
         poster_path = f"https://image.tmdb.org/t/p/w500{collection_info.get('poster_path')}" if collection_info.get('poster_path') else None

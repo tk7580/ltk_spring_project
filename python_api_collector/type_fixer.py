@@ -1,21 +1,17 @@
-# type_fixer.py (명령줄 인수 기능 추가)
-
 import os
 import time
 import json
-import argparse # ★★★ argparse 라이브러리 임포트 ★★★
+import argparse
 from dotenv import load_dotenv, find_dotenv
 import mysql.connector
 from mysql.connector import Error
 
-# --- 환경 변수 및 API 설정 ---
 load_dotenv(find_dotenv())
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     import google.generativeai as genai
     genai.configure(api_key=GEMINI_API_KEY)
 
-# --- DB Helper Functions ---
 def get_db_connection():
     try:
         connection = mysql.connector.connect(
@@ -33,7 +29,7 @@ def get_candidates_for_drama_fix(cursor, limit):
     SELECT w.id, w.titleKr, w.description FROM work w
     LEFT JOIN work_type_mapping wtm ON w.id = wtm.workId
     LEFT JOIN work_type wt ON wtm.typeId = wt.id AND wt.name = 'Drama'
-    WHERE wt.id IS NULL
+    WHERE wt.id IS NULL AND w.description IS NOT NULL AND w.description != ''
     LIMIT %s
     """
     cursor.execute(query, (limit,))
@@ -62,7 +58,6 @@ def ask_gemini_is_drama(work_data):
         return None
 
 def main():
-    # ★★★ [수정] 명령줄 인수 파서 설정 ★★★
     parser = argparse.ArgumentParser(description="LLM을 이용해 작품에 'Drama' 타입을 지능적으로 부여합니다.")
     parser.add_argument('--limit', type=int, default=20, help="한 번에 처리할 작품의 최대 개수")
     args = parser.parse_args()
@@ -73,7 +68,6 @@ def main():
 
     cursor = connection.cursor(dictionary=True)
 
-    # ★★★ [수정] 하드코딩된 변수 대신 args.limit 사용 ★★★
     candidates = get_candidates_for_drama_fix(cursor, limit=args.limit)
 
     if not candidates:
