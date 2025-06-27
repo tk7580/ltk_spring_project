@@ -3,19 +3,13 @@ package com.ltk.springproject.service;
 import com.ltk.springproject.domain.*;
 import com.ltk.springproject.dto.ArticleWithCommentsDto;
 import com.ltk.springproject.repository.*;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Service
 @Transactional
@@ -26,6 +20,7 @@ public class ArticleService {
     private final ReplyRepository replyRepository;
     private final MemberRepository memberRepository;
     private final BoardRepository boardRepository;
+    private final ArticleViewLogRepository articleViewLogRepository; // [신규] 조회 기록 리포지토리 주입
 
     // 게시판 ID로 게시글 목록 조회 (최신순)
     @Transactional(readOnly = true)
@@ -33,24 +28,26 @@ public class ArticleService {
         return articleRepository.findByBoardIdOrderByIdDesc(boardId);
     }
 
-    // 게시글 상세 조회 (조회수 중복 방지 로직 포함)
-    public ArticleWithCommentsDto getArticleWithComments(Long articleId) {
+    // [수정] 게시글 상세 조회 로직 변경 (세션 -> DB 기반)
+    public ArticleWithCommentsDto getArticleWithComments(Long articleId, Long memberId) {
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
 
-        // 세션을 이용한 조회수 중복 증가 방지
-        HttpServletRequest req = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
-        HttpSession session = req.getSession();
-        Set<Long> viewedArticles = (Set<Long>) session.getAttribute("viewedArticles");
+        // 로그인한 사용자이고, 이 게시글을 처음 조회하는 경우에만 조회수 증가
+        if (memberId != null) {
+            if (!articleViewLogRepository.existsByMemberIdAndArticleId(memberId, articleId)) {
+                // 조회 기록 테이블에 로그 저장
+                Member member = memberRepository.findById(memberId)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+                ArticleViewLog viewLog = ArticleViewLog.builder()
+                        .member(member)
+                        .article(article)
+                        .build();
+                articleViewLogRepository.save(viewLog);
 
-        if (viewedArticles == null) {
-            viewedArticles = new HashSet<>();
-        }
-
-        if (!viewedArticles.contains(articleId)) {
-            article.setHitCount(article.getHitCount() + 1);
-            viewedArticles.add(articleId);
-            session.setAttribute("viewedArticles", viewedArticles);
+                // 게시글의 조회수(hitCount) 1 증가
+                article.setHitCount(article.getHitCount() + 1);
+            }
         }
 
         List<Reply> replies = replyRepository.findByArticleAndParentIsNullOrderByRegDateAsc(article);
