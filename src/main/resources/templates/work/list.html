@@ -10,6 +10,8 @@
             .list-filters .btn-filter { padding: 6px 12px; font-size: 14px; border: 1px solid #dee2e6; background-color: #fff; border-radius: 20px; text-decoration: none; color: #495057; transition: all 0.2s; }
             .list-filters .btn-filter:hover { background-color: #e9ecef; }
             .list-filters .btn-filter.active { background-color: #2196F3; color: #fff; border-color: #2196F3; font-weight: bold; }
+            /* [추가] 구분선 스타일 */
+            .list-filters .filter-separator { color: #ccc; margin: 0 5px; }
             .work-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; }
             .work-card .types { font-size: 12px; color: #6c757d; }
         </style>
@@ -26,11 +28,16 @@
                     <a th:href="@{/works(type='All', sortBy=${selectedSortBy})}"
                        th:classappend="${selectedType == 'All'} ? 'active'" class="btn-filter">전체</a>
 
-                    <a th:each="workType : ${workTypes}"
-                       th:href="@{/works(type=${workType}, sortBy=${selectedSortBy})}"
-                       th:classappend="${selectedType == workType} ? 'active'"
-                       class="btn-filter"
-                       th:text="${typeDisplayNames.get(workType)}"></a>
+                    <span class="filter-separator">|</span>
+
+                    <a th:href="@{/works(type='Movie', sortBy=${selectedSortBy})}"
+                       th:classappend="${selectedType == 'Movie'} ? 'active'" class="btn-filter">영화</a>
+
+                    <a th:href="@{/works(type='Drama', sortBy=${selectedSortBy})}"
+                       th:classappend="${selectedType == 'Drama'} ? 'active'" class="btn-filter">드라마</a>
+
+                    <a th:href="@{/works(type='Animation', sortBy=${selectedSortBy})}"
+                       th:classappend="${selectedType == 'Animation'} ? 'active'" class="btn-filter">애니메이션</a>
                 </div>
                 <div class="filter-group">
                     <strong>정렬:</strong>
@@ -44,10 +51,10 @@
                         <div class="work-info">
                             <h3 th:text="${work.titleKr}">작품 제목</h3>
                             <p class="types">
-                <span th:each="mapping, iterStat : ${work.workTypeMappings}">
-                  <span th:text="${typeDisplayNames.get(mapping.workType.name)}"></span>
-                  <span th:if="!${iterStat.last}">, </span>
-                </span>
+                                <span th:each="mapping, iterStat : ${work.workTypeMappings}">
+                                  <span th:text="${typeDisplayNames.get(mapping.workType.name)}"></span>
+                                  <span th:if="!${iterStat.last}">, </span>
+                                </span>
                             </p>
                         </div>
                     </a>

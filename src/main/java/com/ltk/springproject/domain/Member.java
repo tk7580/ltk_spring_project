@@ -51,14 +51,11 @@ public class Member implements UserDetails {
     private String email;
 
     @Column(name = "delStatus", nullable = false)
-    private int delStatus;
+    @Builder.Default // [수정] 빌더 사용 시 기본값을 0으로 설정합니다.
+    private int delStatus = 0; // [수정] 필드 자체에도 기본값을 할당하여 안정성을 높입니다.
 
     @Column(name = "delDate")
     private LocalDateTime delDate;
-
-    // gender, birthDate 필드는 DB에 없으므로 엔티티에서도 제외하거나,
-    // DDL에 추가한 후 @Column 어노테이션을 달아주어야 합니다.
-    // 현재는 DDL 기준으로 제외했습니다.
 
     @PrePersist
     protected void onCreate() {
