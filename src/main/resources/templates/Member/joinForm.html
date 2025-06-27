@@ -1,40 +1,96 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>회원 가입</title>
+    <title>회원가입 - PlotPath</title>
+    <th:block layout:fragment="css">
+        <style>
+            .form-container {
+                max-width: 400px;
+                margin: 40px auto;
+                padding: 30px;
+                background-color: #fff;
+                border-radius: 8px;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            }
+            .form-container h1 {
+                text-align: center;
+                font-size: 24px;
+                margin-bottom: 25px;
+            }
+            .form-group {
+                margin-bottom: 20px;
+            }
+            .form-group label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 500;
+            }
+            .form-group input {
+                width: 100%;
+                padding: 12px;
+                font-size: 16px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                box-sizing: border-box;
+            }
+            .form-actions .btn {
+                width: 100%;
+                padding: 12px;
+                font-size: 16px;
+                font-weight: bold;
+                color: #fff;
+                background-color: #FF7043;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+            .form-link {
+                text-align: center;
+                margin-top: 20px;
+            }
+            .form-link a {
+                color: #2196F3;
+                text-decoration: none;
+            }
+        </style>
+    </th:block>
 </head>
-<body>
-<h1>회원 가입</h1>
-<form action="/member/doJoin" method="POST">
-    <p>
-        <label for="loginId">로그인 아이디:</label><br>
-        <input type="text" id="loginId" name="loginId" required>
-    </p>
-    <p>
-        <label for="loginPw">비밀번호:</label><br>
-        <input type="password" id="loginPw" name="loginPw" required>
-    </p>
-    <p>
-        <label for="name">이름:</label><br>
-        <input type="text" id="name" name="name" required>
-    </p>
-    <p>
-        <label for="nickname">닉네임:</label><br>
-        <input type="text" id="nickname" name="nickname" required>
-    </p>
-    <p>
-        <label for="cellphoneNum">휴대폰 번호:</label><br>
-        <input type="text" id="cellphoneNum" name="cellphoneNum" required>
-    </p>
-    <p>
-        <label for="email">이메일:</label><br>
-        <input type="email" id="email" name="email" required>
-    </p>
-    <p>
-        <button type="submit">가입하기</button>
-    </p>
-</form>
-</body>
+<th:block layout:fragment="content">
+    <div class="form-container">
+        <h1>회원가입</h1>
+        <form th:action="@{/member/doJoin}" method="POST">
+            <div class="form-group">
+                <label for="loginId">로그인 아이디</label>
+                <input type="text" id="loginId" name="loginId" required>
+            </div>
+            <div class="form-group">
+                <label for="loginPw">비밀번호</label>
+                <input type="password" id="loginPw" name="loginPw" required>
+            </div>
+            <div class="form-group">
+                <label for="name">이름</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="nickname">닉네임</label>
+                <input type="text" id="nickname" name="nickname" required>
+            </div>
+            <div class="form-group">
+                <label for="cellphoneNum">휴대폰 번호</label>
+                <input type="text" id="cellphoneNum" name="cellphoneNum" required>
+            </div>
+            <div class="form-group">
+                <label for="email">이메일</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn">가입하기</button>
+            </div>
+        </form>
+        <div class="form-link">
+            <span>이미 계정이 있으신가요? </span>
+            <a th:href="@{/member/login}">로그인</a>
+        </div>
+    </div>
+</th:block>
 </html>

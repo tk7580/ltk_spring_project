@@ -43,13 +43,13 @@ public class SecurityConfig {
                                 "/apple-touch-icon.png",
                                 "/favicon-32x32.png",
                                 "/favicon-16x16.png",
-                                // ===== 아래 경로들을 permitAll()에 추가합니다 =====
                                 "/chart/**",
                                 "/works/**",
                                 "/work/**",
-                                // ==========================================
-                                "/series/{seriesId}/board", // 게시판 목록
-                                "/series/{seriesId}/board/{articleId}" // 게시판 상세
+                                "/series", // [수정] 시리즈 목록 페이지 경로 추가
+                                "/series/{id}",
+                                "/series/{seriesId}/board",
+                                "/series/{seriesId}/board/{articleId}"
                         ).permitAll()
                         .requestMatchers("/member/**").authenticated()
                         .anyRequest().authenticated()
@@ -59,7 +59,7 @@ public class SecurityConfig {
                                 "default-src 'self';" +
                                         " script-src 'self' 'unsafe-inline';" +
                                         " style-src 'self' 'unsafe-inline';" +
-                                        " img-src 'self' https://image.tmdb.org data:;" +
+                                        " img-src 'self' https://image.tmdb.org https://s4.anilist.co data:;" +
                                         " frame-src 'none';" +
                                         " object-src 'none';"
                         ))

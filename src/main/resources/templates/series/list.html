@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
+<head>
+    <title>시리즈 목록 - PlotPath</title>
+    <th:block layout:fragment="css">
+        <style>
+            .work-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; }
+        </style>
+    </th:block>
+</head>
+<th:block layout:fragment="content">
+    <main class="main-content">
+        <section class="content-section">
+            <h2>전체 시리즈</h2>
+
+            <div th:if="${#lists.isEmpty(seriesList)}">
+                <p>등록된 시리즈가 없습니다.</p>
+            </div>
+
+            <div class="work-grid" th:unless="${#lists.isEmpty(seriesList)}">
+                <div class="work-card" th:each="series : ${seriesList}">
+                    <a th:href="@{'/series/' + ${series.id}}">
+                        <img th:src="${series.thumbnailUrl != null ? series.thumbnailUrl : '/images/placeholder_poster.png'}" alt="시리즈 썸네일"/>
+                        <div class="work-info">
+                            <h3 th:text="${series.titleKr}">시리즈 제목</h3>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+</th:block>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
+<head>
+  <title th:text="${series.titleKr} + ' - PlotPath'"></title>
+</head>
+<body>
+<th:block layout:fragment="content">
+  <main class="main-content">
+    <section class="content-section detail-section">
+      <div class="detail-container">
+        <div class="detail-poster-wrapper">
+          <img th:src="${series.thumbnailUrl != null ? series.thumbnailUrl : '/images/placeholder_poster.png'}" alt="시리즈 포스터" />
+        </div>
+        <div class="detail-info">
+          <div class="detail-title-wrapper">
+            <h1 th:text="${series.titleKr}">시리즈 제목</h1>
+            <p class="title-original" th:text="${series.titleOriginal}">Original Title</p>
+          </div>
+          <ul class="detail-meta-list" style="border: none; padding: 0;">
+            <li><strong>제작사</strong> <span th:text="${series.studios}"></span></li>
+          </ul>
+          <div class="action-buttons-wrapper">
+            <a th:href="@{/series/{id}/board(id=${series.id})}" class="btn btn-watch" style="background-color: #2196F3; color: white;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              <span>이 시리즈 게시판 가기</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="detail-separator"></div>
+      <div class="detail-description">
+        <p th:text="${series.description}">시리즈에 대한 상세 설명이 여기에 들어갑니다.</p>
+      </div>
+    </section>
+  </main>
+</th:block>
+</body>
+</html>
