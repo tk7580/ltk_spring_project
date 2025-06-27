@@ -1,23 +1,137 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/default_layout}">
 <head>
-    <title th:text="${series.titleKr} + ' - 게시판'"></title>
+    <title th:text="${board.name} + ' - PlotPath'"></title>
+    <th:block layout:fragment="css">
+        <style>
+            .article-list-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid #333;
+            }
+            .article-list-header h2 {
+                margin: 0;
+                font-size: 22px;
+            }
+            .btn-write {
+                padding: 8px 16px;
+                font-size: 15px;
+                font-weight: 500;
+                color: #fff;
+                background-color: #2196F3;
+                border-radius: 5px;
+                text-decoration: none;
+                transition: background-color 0.2s;
+            }
+            .btn-write:hover {
+                background-color: #1976D2;
+            }
+
+            .article-list-container {
+                border-top: 1px solid #eee;
+            }
+
+            /* 각 게시글을 감싸는 카드(박스) 스타일 */
+            .article-card {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 15px;
+                /* [수정] 구분선 색상을 #dcdcdc로 변경 */
+                border-bottom: 1px solid #dcdcdc;
+                transition: background-color 0.2s;
+            }
+            .article-card:hover {
+                background-color: #f9f9f9;
+            }
+
+            /* 게시글 제목과 링크의 기본 스타일 제거 */
+            .article-card a {
+                text-decoration: none;
+                color: inherit;
+                display: flex;
+                flex-grow: 1;
+                align-items: center;
+                min-width: 0; /* flex 자식 요소의 크기 오류 방지 */
+            }
+            .article-info {
+                flex-grow: 1;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .article-title {
+                font-size: 16px;
+                font-weight: 500;
+                color: #333; /* 기본 텍스트 색상 */
+                vertical-align: middle;
+            }
+            .article-comment-count {
+                font-size: 15px;
+                color: #FF7043;
+                font-weight: bold;
+                margin-left: 8px;
+                vertical-align: middle;
+            }
+
+            /* 방문한 링크(읽은 글)에 대한 스타일 */
+            .article-card a:visited .article-title {
+                color: #6a0dad; /* 보라색 계열로 변경 */
+            }
+            .article-card a:visited .article-comment-count {
+                color: #c084fc; /* 방문한 링크의 댓글 카운트 색상 */
+            }
+
+            /* 작성자, 작성일 메타 정보 스타일 */
+            .article-meta {
+                flex-shrink: 0; /* 크기가 줄어들지 않도록 설정 */
+                display: flex;
+                gap: 15px;
+                font-size: 14px;
+                color: #666;
+                margin-left: 20px;
+                text-align: right;
+            }
+
+            .no-articles {
+                padding: 50px 0;
+                text-align: center;
+                color: #888;
+                font-size: 16px;
+            }
+        </style>
+    </th:block>
 </head>
 <th:block layout:fragment="content">
     <main class="main-content">
         <section class="content-section">
-            <h2 th:text="${series.titleKr} + ' 게시판'"></h2>
-            <div style="text-align: right; margin-bottom: 15px;">
+            <div class="article-list-header">
+                <h2 th:text="${board.name}">게시판 이름</h2>
                 <a th:href="@{/series/{seriesId}/board/write(seriesId=${series.id})}" class="btn-write">글쓰기</a>
             </div>
-            <table class="article-table">
-                <thead>...</thead>
-                <tbody>
-                <tr th:each="article : ${articles}">
-                    <td><a th:href="@{/series/{seriesId}/board/{articleId}(seriesId=${series.id}, articleId=${article.id})}" th:text="${article.title}"></a></td>
-                </tr>
-                </tbody>
-            </table>
+
+            <div class="article-list-container">
+                <div th:if="${#lists.isEmpty(articles)}" class="no-articles">
+                    <p>등록된 게시글이 없습니다.</p>
+                </div>
+
+                <div th:unless="${#lists.isEmpty(articles)}" th:each="article : ${articles}" class="article-card">
+                    <a th:href="@{/series/{seriesId}/board/{articleId}(seriesId=${series.id}, articleId=${article.id})}">
+                        <div class="article-info">
+                            <span class="article-title" th:text="${article.title}">게시글 제목입니다.</span>
+                            <span class="article-comment-count" th:if="${!#lists.isEmpty(article.replies)}"
+                                  th:text="'[' + ${#lists.size(article.replies)} + ']'"></span>
+                        </div>
+                    </a>
+                    <div class="article-meta">
+                        <span class="author" th:text="${article.member.nickname}">작성자</span>
+                        <span class="date" th:text="${#temporals.format(article.regDate, 'yyyy-MM-dd HH:mm')}">2025-06-27 11:40</span>
+                    </div>
+                </div>
+            </div>
         </section>
     </main>
 </th:block>

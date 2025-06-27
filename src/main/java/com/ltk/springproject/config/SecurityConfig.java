@@ -46,7 +46,7 @@ public class SecurityConfig {
                                 "/chart/**",
                                 "/works/**",
                                 "/work/**",
-                                "/series", // [수정] 시리즈 목록 페이지 경로 추가
+                                "/series",
                                 "/series/{id}",
                                 "/series/{seriesId}/board",
                                 "/series/{seriesId}/board/{articleId}"
