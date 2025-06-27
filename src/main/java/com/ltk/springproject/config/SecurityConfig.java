@@ -46,8 +46,10 @@ public class SecurityConfig {
                                 // ===== 아래 경로들을 permitAll()에 추가합니다 =====
                                 "/chart/**",
                                 "/works/**",
-                                "/work/**"
+                                "/work/**",
                                 // ==========================================
+                                "/series/{seriesId}/board", // 게시판 목록
+                                "/series/{seriesId}/board/{articleId}" // 게시판 상세
                         ).permitAll()
                         .requestMatchers("/member/**").authenticated()
                         .anyRequest().authenticated()

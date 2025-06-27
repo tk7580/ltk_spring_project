@@ -1,5 +1,6 @@
 package com.ltk.springproject.domain;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -19,48 +20,48 @@ public class Article {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "regDate", nullable = false, updatable = false)
-    private LocalDateTime regDate;
-
-    @Column(name = "updateDate", nullable = false)
-    private LocalDateTime updateDate;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "boardId", nullable = false)
+    private Board board;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "memberId")
+    @JoinColumn(name = "memberId", nullable = false)
     private Member member;
 
-    // ★★★ [수정] Series 와의 관계를 Work 와의 관계로 변경 ★★★
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "workId")
-    private Work work;
-
-    @Column(name = "title")
+    @Column(nullable = false)
     private String title;
 
     @Lob
-    @Column(name = "body", columnDefinition = "TEXT")
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String body;
 
-    @Column(name = "hitCount")
-    private Integer hitCount;
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer hitCount = 0;
 
-    @Column(name = "goodReactionPoint")
-    private Integer goodReactionPoint;
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer goodReactionPoint = 0;
 
-    @Column(name = "badReactionPoint")
-    private Integer badReactionPoint;
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer badReactionPoint = 0;
 
     @OneToMany(mappedBy = "article", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonManagedReference
     private List<Reply> replies = new ArrayList<>();
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime regDate;
+
+    @Column(nullable = false)
+    private LocalDateTime updateDate;
 
     @PrePersist
     protected void onCreate() {
         this.regDate = LocalDateTime.now();
         this.updateDate = LocalDateTime.now();
-        this.hitCount = 0;
-        this.goodReactionPoint = 0;
-        this.badReactionPoint = 0;
     }
 
     @PreUpdate

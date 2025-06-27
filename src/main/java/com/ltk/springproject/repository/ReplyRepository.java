@@ -18,4 +18,6 @@ public interface ReplyRepository extends JpaRepository<Reply, Long> { // Long으
     // 특정 부모 댓글에 속한 자식 댓글(대댓글) 목록 찾기
     List<Reply> findByParent(Reply parent);
     List<Reply> findByParentId(Long parentId); // Long으로 변경
+
+    List<Reply> findByArticleAndParentIsNullOrderByRegDateAsc(Article article);
 }

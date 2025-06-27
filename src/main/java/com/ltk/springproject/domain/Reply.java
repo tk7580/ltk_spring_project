@@ -1,11 +1,9 @@
 package com.ltk.springproject.domain;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import lombok.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,50 +19,52 @@ public class Reply {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false, updatable = false)
-    private Long id; // Integer -> Long으로 변경
-
-    @Column(name = "regDate", nullable = false, updatable = false)
-    private LocalDateTime regDate;
-
-    @Column(name = "updateDate", nullable = false)
-    private LocalDateTime updateDate;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "memberId", nullable = false)
     private Member member;
 
-    @Column(name = "relTypeCode", nullable = false, length = 50)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "relId", nullable = false)
+    @JsonBackReference
+    private Article article;
+
+    @Column(nullable = false, length = 50)
     private String relTypeCode;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "relId", nullable = false)
-    private Article article;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parentId")
+    @JsonBackReference
     private Reply parent;
 
-    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
+    @JsonManagedReference
     private List<Reply> children = new ArrayList<>();
 
     @Lob
-    @Column(name = "body", nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String body;
 
-    @Column(name = "goodReactionPoint", nullable = false)
-    private Integer goodReactionPoint;
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer goodReactionPoint = 0;
 
-    @Column(name = "badReactionPoint", nullable = false)
-    private Integer badReactionPoint;
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer badReactionPoint = 0;
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime regDate;
+
+    @Column(nullable = false)
+    private LocalDateTime updateDate;
 
     @PrePersist
     protected void onCreate() {
         this.regDate = LocalDateTime.now();
         this.updateDate = LocalDateTime.now();
-        this.goodReactionPoint = 0;
-        this.badReactionPoint = 0;
         if (this.relTypeCode == null) {
             this.relTypeCode = "article";
         }
@@ -73,12 +73,5 @@ public class Reply {
     @PreUpdate
     protected void onUpdate() {
         this.updateDate = LocalDateTime.now();
-    }
-
-    public void addChildReply(Reply child) {
-        this.children.add(child);
-        if (child.getParent() != this) {
-            child.setParent(this);
-        }
     }
 }

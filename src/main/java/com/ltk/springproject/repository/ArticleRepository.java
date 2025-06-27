@@ -17,4 +17,6 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     // 제목으로 게시글 검색 (부분 일치)
     List<Article> findByTitleContaining(String keyword);
+
+    List<Article> findByBoardIdOrderByIdDesc(Long boardId);
 }

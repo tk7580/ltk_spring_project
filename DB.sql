@@ -186,7 +186,7 @@ CREATE TABLE `conpro`
     FOREIGN KEY (`workId`) REFERENCES `work` (`id`) ON DELETE CASCADE
 );
 
--- ======== [수정/신규] 게시판 관련 테이블 생성 ========
+-- ======== 게시판 관련 테이블 생성 ========
 CREATE TABLE `board`
 (
     `id`         BIGINT       NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -214,6 +214,18 @@ CREATE TABLE `article`
     FOREIGN KEY (`boardId`) REFERENCES `board` (`id`) ON DELETE CASCADE
 );
 
+-- [신규] 게시글 조회 기록 테이블
+CREATE TABLE `article_view_log`
+(
+    `id`        BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `regDate`   DATETIME NOT NULL,
+    `memberId`  BIGINT   NOT NULL,
+    `articleId` BIGINT UNSIGNED NOT NULL,
+    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`articleId`) REFERENCES `article` (`id`) ON DELETE CASCADE,
+    UNIQUE KEY `UK_memberId_articleId` (`memberId`, `articleId`)
+);
+
 CREATE TABLE `reply`
 (
     `id`                BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -238,10 +250,11 @@ CREATE TABLE `reactionPoint`
     `updateDate`   DATETIME NOT NULL,
     `memberId`     BIGINT   NOT NULL,
     `relTypeCode`  CHAR(50) NOT NULL COMMENT '관련 타입 (article, reply)',
-    `relId`        BIGINT   NOT NULL,
+    `relId`        BIGINT UNSIGNED NOT NULL COMMENT '관련 데이터 ID',
     `reactionType` CHAR(10) NOT NULL COMMENT '반응 종류 (GOOD, BAD)',
     `point`        INT      NOT NULL,
-    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE
+    FOREIGN KEY (`memberId`) REFERENCES `member` (`id`) ON DELETE CASCADE,
+    UNIQUE KEY `UK_memberId_relTypeCode_relId` (`memberId`, `relTypeCode`, `relId`)
 );
 
 

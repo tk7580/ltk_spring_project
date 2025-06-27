@@ -1,12 +1,10 @@
 package com.ltk.springproject.domain;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import lombok.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "board")
@@ -19,34 +17,32 @@ public class Board {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false, updatable = false)
-    private Long id; // Integer -> Long으로 변경
+    private Long id;
 
-    @Column(name = "regDate", nullable = false, updatable = false)
-    private LocalDateTime regDate;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "seriesId", nullable = false, unique = true)
+    private Series series;
 
-    @Column(name = "updateDate", nullable = false)
-    private LocalDateTime updateDate;
-
-    @Column(name = "code", nullable = false, unique = true, length = 50)
-    private String code;
-
-    @Column(name = "name", nullable = false, unique = true, length = 20)
+    @Column(nullable = false)
     private String name;
 
-    @Column(name = "delStatus", nullable = false)
-    private int delStatus;
+    @Column(nullable = false, unique = true, length = 50)
+    private String code;
 
-    @Column(name = "delDate")
-    private LocalDateTime delDate;
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime regDate;
+
+    @Column(nullable = false)
+    private LocalDateTime updateDate;
+
+    @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Article> articles = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
         this.regDate = LocalDateTime.now();
         this.updateDate = LocalDateTime.now();
-        if (this.delStatus != 1) {
-            this.delStatus = 0;
-        }
     }
 
     @PreUpdate
