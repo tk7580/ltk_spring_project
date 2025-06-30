@@ -1,95 +1,78 @@
-#!/usr/bin/env python
-"""
-series_batch_reconciler.py
-──────────────────────────
-모든 work 를 훑어 제목 기반으로 시리즈를 자동 정리/병합한다.
+#!/usr/bin/env python3
+# series_batch_reconciler.py
 
-사용법
-------
-python series_batch_reconciler.py   # 전체
-python series_batch_reconciler.py --limit 500   # 상위 500개만
-"""
+import os
+import time
+import requests
+import json
+from dotenv import load_dotenv
+from db_utils import get_db_connection
 
-import re, argparse, unicodedata
-from collections import defaultdict
-from db_utils import cursor
+# ──────────────────────────────────────────────────────────────────────────────
+# 환경변수 로드 & 검증
+load_dotenv()
+ANILIST_API_URL   = os.getenv("ANILIST_API_URL", "https://graphql.anilist.co")
+PAGE_SIZE         = int(os.getenv("ANILIST_PAGE_SIZE", 50))
 
-# 시즌·파트 표기를 빼기 위한 정규식
-SEASON_RX = re.compile(
-    r"\s*([Ss]eason|[0-9]+기|[Pp]art|[편권]|[第]?\d+[話話話]?|\d+st|\d+nd|\d+rd|\d+th)\s*$"
-)
+# ──────────────────────────────────────────────────────────────────────────────
+# GraphQL Query: 시리즈 포함된 페이지 단위 fetch
+BATCH_QUERY = '''
+query ($page: Int, $perPage: Int) {
+  Page(page: $page, perPage: $perPage) {
+    pageInfo { hasNextPage }
+    media(type: ANIME) {
+      id
+      relations {
+        edges { node { id } }
+      }
+    }
+  }
+}
+'''
 
-def normalize(title: str) -> str:
-    """‘귀멸의 칼날 1기’ → ‘귀멸의 칼날’ 같이 시리즈 공통부 추출"""
-    t = unicodedata.normalize("NFKC", title)
-    t = SEASON_RX.sub("", t)        # 시즌/파트 숫자 제거
-    return t.strip()
+def fetch_batch(page: int) -> dict:
+    resp = requests.post(
+        ANILIST_API_URL,
+        json={"query": BATCH_QUERY, "variables": {"page": page, "perPage": PAGE_SIZE}},
+        timeout=30
+    )
+    resp.raise_for_status()
+    return resp.json()["data"]["Page"]
 
-def fetch_works(limit: int | None = None):
-    with cursor() as cur:
-        sql = "SELECT id, seriesId, titleKr, titleOriginal FROM work"
-        if limit:
-            sql += " LIMIT %s"
-            cur.execute(sql, (limit,))
-        else:
-            cur.execute(sql)
-        return cur.fetchall()
+# ──────────────────────────────────────────────────────────────────────────────
+# DB 업데이트
+def map_series_works(series_id: int, work_ids: list):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    for wid in work_ids:
+        cursor.execute(
+            "INSERT IGNORE INTO series_work (series_id, work_id) VALUES (%s, %s)",
+            (series_id, wid)
+        )
+    conn.commit()
+    cursor.close()
+    conn.close()
 
-def ensure_series(name_kr: str, name_orig: str | None):
-    with cursor() as cur:
-        cur.execute("SELECT id FROM series WHERE titleKr=%s", (name_kr,))
-        row = cur.fetchone()
-        if row:
-            return row["id"]
-        cur.execute("""
-            INSERT INTO series(regDate, updateDate, titleKr, titleOriginal)
-            VALUES (NOW(), NOW(), %s, %s)
-        """, (name_kr, name_orig))
-        sid = cur.lastrowid
-        # 게시판 1:1 생성
-        cur.execute("""
-            INSERT INTO board(regDate, updateDate, seriesId, name, code)
-            VALUES (NOW(), NOW(), %s, %s, %s)
-        """, (sid, f"{name_kr} 게시판", f"series_{sid}"))
-        return sid
-
-def reconcile(limit: int | None):
-    works = fetch_works(limit)
-    groups: defaultdict[str, list[dict]] = defaultdict(list)
-
-    for w in works:
-        key = normalize(w["titleKr"] or w["titleOriginal"])
-        groups[key].append(w)
-
-    moved, created = 0, 0
-    for key, ws in groups.items():
-        # 시리즈 대표: 이미 시리즈 있는 work 중 첫 번째, 없으면 새로
-        repr_work = next((w for w in ws if w["seriesId"]), ws[0])
-        repr_series_id = repr_work["seriesId"]
-        if not repr_series_id:
-            repr_series_id = ensure_series(
-                key, repr_work["titleOriginal"] or repr_work["titleKr"]
-            )
-            created += 1
-
-        # 다른 work 들을 동일 시리즈로 이동
-        for w in ws:
-            if w["seriesId"] != repr_series_id:
-                with cursor() as cur:
-                    cur.execute(
-                        "UPDATE work SET seriesId=%s WHERE id=%s",
-                        (repr_series_id, w["id"]),
-                    )
-                moved += 1
-
-    print(f"✅  series created {created} · works moved {moved}")
-
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--limit", type=int, help="작품 N개만 테스트")
-    args = ap.parse_args()
-
-    reconcile(args.limit)
+def main(delay: float = 0.5):
+    page = 1
+    while True:
+        batch = fetch_batch(page)
+        for rec in batch.get("media", []):
+            # series root ID = 최소값
+            ids = [e["node"]["id"] for e in rec["relations"]["edges"]] + [rec["id"]]
+            root = min(ids)
+            map_series_works(root, ids)
+            print(f"[BatchRecon] series_id={root} mapped works={ids}")
+            time.sleep(delay)
+        if not batch.get("pageInfo", {}).get("hasNextPage"):
+            print("[BatchRecon] 모든 배치 처리 완료.")
+            break
+        page += 1
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description="시리즈-워크 배치 매핑 스크립트")
+    parser.add_argument("--delay", type=float, default=0.5,
+                        help="각 요청 사이 대기 시간(초)")
+    args = parser.parse_args()
+    main(delay=args.delay)

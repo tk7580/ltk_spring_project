@@ -29,16 +29,16 @@ def get_candidates_for_drama_fix(cursor, limit):
     print(f"DB에서 'Live-Action'이면서 'Drama' 타입이 아닌 작품을 {limit}개 가져옵니다...")
     # ★★★ [수정] 'Live-Action' 타입이 있는 작품만 가져오도록 SQL 변경 ★★★
     query = """
-    SELECT w.id, w.titleKr, w.description FROM work w
-    -- 이 작품이 Live-Action 타입인지 확인
-    JOIN work_type_mapping wtm_live ON w.id = wtm_live.workId
-    JOIN work_type wt_live ON wtm_live.typeId = wt_live.id AND wt_live.name = 'Live-Action'
-    -- 이 작품에 Drama 타입이 없는지 확인
-    LEFT JOIN work_type_mapping wtm_drama ON w.id = wtm_drama.workId AND wtm_drama.typeId = (SELECT id FROM work_type WHERE name = 'Drama')
-    WHERE wtm_drama.workId IS NULL
-    AND w.description IS NOT NULL AND w.description != ''
-    LIMIT %s
-    """
+            SELECT w.id, w.titleKr, w.description FROM work w
+                                                           -- 이 작품이 Live-Action 타입인지 확인
+                                                           JOIN work_type_mapping wtm_live ON w.id = wtm_live.workId
+                                                           JOIN work_type wt_live ON wtm_live.typeId = wt_live.id AND wt_live.name = 'Live-Action'
+                -- 이 작품에 Drama 타입이 없는지 확인
+                                                           LEFT JOIN work_type_mapping wtm_drama ON w.id = wtm_drama.workId AND wtm_drama.typeId = (SELECT id FROM work_type WHERE name = 'Drama')
+            WHERE wtm_drama.workId IS NULL
+              AND w.description IS NOT NULL AND w.description != ''
+    LIMIT %s \
+            """
     cursor.execute(query, (limit,))
     return cursor.fetchall()
 

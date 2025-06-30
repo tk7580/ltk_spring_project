@@ -8,7 +8,9 @@ Unified entry-point for collectors / utilities.
   python run.py fix-types  --limit 300
   python run.py enrich     --work-id 12345
 """
-import argparse, importlib, sys
+import argparse
+import importlib
+import sys
 
 MODULE_MAP = {
     "anilist":    "anilist_collector",
@@ -16,25 +18,39 @@ MODULE_MAP = {
     "series":     "series_collector",
     "reconcile":  "data_reconciler",
     "fix-types":  "type_fixer",
-    "enrich":     "llm_enricher",
+    "enrich":     "detail_enricher",
+    "batch-reconcile": "series_batch_reconciler"
 }
 
+
 def main():
-    p = argparse.ArgumentParser(prog="run.py")
+    p = argparse.ArgumentParser(description="파이프라인 실행기")
     sub = p.add_subparsers(dest="command", required=True)
 
-    # ----- collect ----------------------------------------------------------
-    collect = sub.add_parser("collect")
-    collect.add_argument("--source", choices=["anilist", "tmdb"], required=True)
-    collect.add_argument("--type",   choices=["movie", "tv"], help="tmdb only")
-    collect.add_argument("--pages",  type=int, default=1)
-    collect.add_argument("--delay",  type=float, default=0.5)
+    # collect 서브커맨드
+    c1 = sub.add_parser("collect", help="데이터 수집 실행 (anilist, tmdb, series)")
+    c1.add_argument("--source", choices=["anilist","tmdb","series"], required=True)
+    c1.add_argument("--pages", type=int, default=None, help="페이지 수 (AniList/Series)")
+    c1.add_argument("--batch", type=int, default=None, help="배치 크기 (TMDB)")
+    c1.add_argument("--delay", type=float, default=0.5, help="각 요청 사이 대기 시간(초)")
+    c1.add_argument("--type", type=str, default=None, help="TMDB collect시 type 지정(movie/tv)")
 
-    # ----- fix-types --------------------------------------------------------
-    sub.add_parser("fix-types").add_argument("--limit", type=int, default=500)
+    # fix-types 서브커맨드
+    c2 = sub.add_parser("fix-types", help="DB work 타입 보정 실행")
+    c2.add_argument("--limit", type=int, default=None, help="최대 처리 개수")
 
-    # ----- enrich -----------------------------------------------------------
-    sub.add_parser("enrich").add_argument("--work-id", type=int, required=True)
+    # reconcile 서브커맨드
+    c3 = sub.add_parser("reconcile", help="데이터 재조정 실행")
+    c3.add_argument("--work-id", type=int, required=False, help="단일 work id 지정")
+
+    # enrich 서브커맨드
+    c4 = sub.add_parser("enrich", help="LLM으로 메타데이터 보강")
+    c4.add_argument("--limit", type=int, default=None)
+    c4.add_argument("--delay", type=float, default=0.5)
+
+    # batch-reconcile 서브커맨드
+    c5 = sub.add_parser("batch-reconcile", help="시리즈 배치별 매핑")
+    c5.add_argument("--delay", type=float, default=0.5)
 
     args = p.parse_args()
 

@@ -1,109 +1,142 @@
-# anilist_collector.py (명령줄 인수 기능 추가)
+#!/usr/bin/env python3
+# anilist_collector.py
 
-import requests
-import time
 import os
-import argparse # ★★★ argparse 라이브러리 임포트 ★★★
-import mysql.connector
-from mysql.connector import Error
-from dotenv import load_dotenv, find_dotenv
+import time
+import json
+import requests
+from dotenv import load_dotenv
+from db_utils import get_db_connection
 
-# data_reconciler.py 에서 최종 완성된 함수를 임포트
-from data_reconciler import process_series_from_entry_point
+# ──────────────────────────────────────────────────────────────────────────────
+# 환경변수 로드 & 검증
+load_dotenv()
+ANILIST_API_URL   = "https://graphql.anilist.co"
+ANILIST_PAGE_SIZE = int(os.getenv("ANILIST_PAGE_SIZE", 50))
 
-# --- 환경 변수 로드 ---
-load_dotenv(find_dotenv())
-API_URL = 'https://graphql.anilist.co'
+if not ANILIST_API_URL:
+    raise EnvironmentError("`ANILIST_API_URL` 환경변수가 없습니다.")
+# ──────────────────────────────────────────────────────────────────────────────
 
-def get_db_connection():
-    try:
-        connection = mysql.connector.connect(
-            host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASSWORD'), database=os.getenv('DB_DATABASE'), port=3306)
-        return connection
-    except Error as e:
-        print(f"DB 연결 오류: {e}")
-        return None
-
-def get_popular_anime_list(page=1, per_page=50):
+def fetch_anilist_media(page: int, per_page: int) -> dict:
     """
-    AniList에서 인기있는 애니메이션 목록을 가져옵니다.
+    AniList GraphQL API에서 ANIME 타입 작품을 페이지 단위로 조회합니다.
     """
-    print(f"\n>>>> AniList에서 인기 애니메이션 목록 조회 시도 (페이지: {page}, 개수: {per_page})")
     query = '''
     query ($page: Int, $perPage: Int) {
-      Page (page: $page, perPage: $perPage) {
-        media (type: ANIME, sort: POPULARITY_DESC, isAdult: false) {
+      Page(page: $page, perPage: $perPage) {
+        pageInfo { total, currentPage, lastPage, hasNextPage }
+        media(type: ANIME) {
           id
-          title {
-            english
-            romaji
+          title { romaji native english }
+          description(asHtml: false)
+          status
+          episodes
+          genres
+          averageScore
+          startDate { year month day }
+          endDate   { year month day }
+          relations {
+            edges {
+              relationType
+              node { id }
+            }
           }
         }
       }
     }
     '''
-    variables = {'page': page, 'perPage': per_page}
-    try:
-        response = requests.post(API_URL, json={'query': query, 'variables': variables})
-        response.raise_for_status()
-        return response.json()['data']['Page']['media']
-    except Exception as e:
-        print(f"애니메이션 목록을 가져오는 중 오류 발생: {e}")
-        return []
+    variables = {"page": page, "perPage": per_page}
+    res = requests.post(
+        ANILIST_API_URL,
+        json={"query": query, "variables": variables},
+        timeout=30
+    )
+    res.raise_for_status()
+    return res.json()["data"]["Page"]
 
-def get_processed_anilist_ids(connection):
-    """ 이미 처리된 AniList ID 목록을 DB에서 가져옵니다. """
-    processed_ids = set()
-    try:
-        cursor = connection.cursor()
-        cursor.execute("SELECT sourceId FROM work_identifier WHERE sourceName = 'ANILIST_ANIME'")
-        results = cursor.fetchall()
-        for row in results:
-            processed_ids.add(int(row[0]))
-        cursor.close()
-    except Error as e:
-        print(f"기처리 ID 목록 조회 중 오류 발생: {e}")
-    return processed_ids
+def save_media_to_db(media_list: list):
+    """
+    가져온 AniList 미디어 목록을 DB의 work 테이블에 insert 또는 update 합니다.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    for m in media_list:
+        titles = m.get("title", {})
+        # 날짜 포맷 YYYY-MM-DD
+        def fmt_date(d):
+            if d and d.get("year"):
+                return f"{d['year']}-{d['month']:02d}-{d['day']:02d}"
+            return None
 
+        cursor.execute("""
+                       INSERT INTO work
+                       (id,
+                        title_romaji, title_native, title_english,
+                        description, status, episodes, average_score,
+                        start_date, end_date)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                           ON DUPLICATE KEY UPDATE
+                                                title_romaji   = VALUES(title_romaji),
+                                                title_native   = VALUES(title_native),
+                                                title_english  = VALUES(title_english),
+                                                description    = VALUES(description),
+                                                status         = VALUES(status),
+                                                episodes       = VALUES(episodes),
+                                                average_score  = VALUES(average_score),
+                                                start_date     = VALUES(start_date),
+                                                end_date       = VALUES(end_date)
+                       """, (
+                           m["id"],
+                           titles.get("romaji"),
+                           titles.get("native"),
+                           titles.get("english"),
+                           m.get("description"),
+                           m.get("status"),
+                           m.get("episodes"),
+                           m.get("averageScore"),
+                           fmt_date(m.get("startDate")),
+                           fmt_date(m.get("endDate"))
+                       ))
+    conn.commit()
+    cursor.close()
+    conn.close()
 
-def main():
-    # ★★★ [수정] 명령줄 인수 파서 설정 ★★★
-    parser = argparse.ArgumentParser(description="AniList에서 인기 애니메이션 정보를 수집하고 데이터를 정제합니다.")
-    parser.add_argument('--pages', type=int, default=1, help="수집할 페이지 수 (페이지당 50개)")
-    args = parser.parse_args()
+def main(limit: int = None, delay: float = 1.0):
+    page    = 1
+    per_page= ANILIST_PAGE_SIZE
+    fetched = 0
 
-    connection = get_db_connection()
-    if not connection: return
-
-    processed_ids = get_processed_anilist_ids(connection)
-    print(f"현재까지 DB에 등록된 AniList 작품 수: {len(processed_ids)}개")
-    connection.close()
-
-    # ★★★ [수정] 하드코딩된 변수 대신 args.pages 사용 ★★★
-    for page_num in range(1, args.pages + 1):
-        anime_list = get_popular_anime_list(page=page_num, per_page=50)
-        if not anime_list:
-            print(f"{page_num} 페이지에서 더 이상 가져올 목록이 없습니다. 작업을 중단합니다.")
+    while True:
+        try:
+            page_data = fetch_anilist_media(page, per_page)
+        except Exception as e:
+            print(f"[AniList] 페이지 {page} 조회 실패: {e}")
             break
 
-        print(f"\n총 {len(anime_list)}개의 애니메이션에 대한 데이터 정제 및 보강 작업을 시작합니다.")
+        media = page_data.get("media", [])
+        save_media_to_db(media)
 
-        for anime in anime_list:
-            anilist_id = anime['id']
-            title = anime['title']['english'] or anime['title']['romaji']
+        fetched += len(media)
+        print(f"[AniList] Page {page}/{page_data.get('lastPage')} 저장 완료 ({len(media)} items)")
 
-            if anilist_id in processed_ids:
-                print(f"\n[SKIP] '{title}' (AniList ID: {anilist_id})는 이미 처리된 작품입니다.")
-                continue
+        if not page_data.get("hasNextPage"):
+            print("[AniList] 더 이상 페이지가 없습니다.")
+            break
 
-            process_series_from_entry_point(anilist_id)
+        if limit and fetched >= limit:
+            print(f"[AniList] 설정된 limit({limit}) 도달, 중단합니다.")
+            break
 
-            print("다음 작업을 위해 2초 대기...")
-            time.sleep(2)
+        page += 1
+        time.sleep(delay)
 
-    print("\n모든 작업이 완료되었습니다.")
+    print(f"[AniList] 전체 수집 종료. 총 {fetched}개 작품 저장됨.")
 
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="AniList 애니메이션 정보 수집기")
+    parser.add_argument("--limit", type=int,   default=None, help="최대 수집 작품 수")
+    parser.add_argument("--delay", type=float, default=1.0, help="페이지 조회 간 딜레이(초)")
+    args = parser.parse_args()
+    main(limit=args.limit, delay=args.delay)

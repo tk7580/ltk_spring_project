@@ -1,38 +1,33 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-series_collector.py
---------------------
-AniList API를 이용해 Series(시리즈)와 그에 속한 Work(원작·애니·실사 등)를
-한 번에 업서트(upsert)합니다.
-"""
+# series_collector.py
 
-import argparse
+import os
+import time
 import requests
-import html
-from data.models import Series, Work  # 실제 ORM 모델 경로로 수정하세요
+import json
+from dotenv import load_dotenv
+from db_utils import get_db_connection
 
-ANILIST_API_URL = "https://graphql.anilist.co"
+# ──────────────────────────────────────────────────────────────────────────────
+# 환경변수 로드 & 검증
+load_dotenv()
+ANILIST_API_URL   = os.getenv("ANILIST_API_URL", "https://graphql.anilist.co")
+PAGE_SIZE         = int(os.getenv("ANILIST_PAGE_SIZE", 50))
 
+# ──────────────────────────────────────────────────────────────────────────────
+# GraphQL Query: 작품의 관계 정보 포함
 SERIES_QUERY = '''
 query ($page: Int, $perPage: Int) {
   Page(page: $page, perPage: $perPage) {
+    pageInfo { hasNextPage }
     media(type: ANIME) {
       id
-      title {
-        romaji
-        native
-        english
-      }
+      title { romaji native english }
       description(asHtml: false)
       relations {
         edges {
           relationType
-          node {
-            id
-            title { romaji native english }
-            description(asHtml: false)
-          }
+          node { id }
         }
       }
     }
@@ -40,70 +35,88 @@ query ($page: Int, $perPage: Int) {
 }
 '''
 
+# ──────────────────────────────────────────────────────────────────────────────
+# GraphQL 호출 & 페이지 단위 페칭
 
-def strip_html_tags(text: str) -> str:
-    """
-    간단히 HTML 태그(<br> 등) 제거하고 엔티티 디코딩
-    """
-    return html.unescape(text or "").replace('<br>', '\n')
-
-
-def upsert_series_and_works(page: int, per_page: int):
-    """
-    AniList에서 page, perPage 만큼 데이터를 가져와
-    Series.upsert_from_dict / Work.upsert_from_dict 로 저장합니다.
-    """
-    variables = {"page": page, "perPage": per_page}
+def fetch_anilist_series(page: int) -> dict:
     resp = requests.post(
         ANILIST_API_URL,
-        json={"query": SERIES_QUERY, "variables": variables}
+        json={"query": SERIES_QUERY, "variables": {"page": page, "perPage": PAGE_SIZE}},
+        timeout=30
     )
     resp.raise_for_status()
-    media_list = resp.json()["data"]["Page"]["media"]
+    return resp.json()["data"]["Page"]
 
-    for m in media_list:
-        # 1) Series 업서트
-        series_data = {
-            "externalIds": {"AniList": m["id"]},
-            "titleOriginal": m["title"]["romaji"] or m["title"]["english"],
-            "titleKr": m["title"]["native"],
-            "description": strip_html_tags(m.get("description"))
-        }
-        series, created = Series.upsert_from_dict(series_data)
+# ──────────────────────────────────────────────────────────────────────────────
+# DB Upsert: series & mapping 테이블
 
-        # 2) relations로 묶인 Work들 업서트
-        for edge in m.get("relations", {}).get("edges", []):
-            node = edge["node"]
-            work_data = {
-                "seriesId": series.id,
-                "externalIds": {"AniList": node["id"]},
-                "titleOriginal": node["title"]["romaji"] or node["title"]["english"],
-                "titleKr": node["title"]["native"],
-                "types": [edge["relationType"]],
-                "description": strip_html_tags(node.get("description"))
-            }
-            Work.upsert_from_dict(work_data)
+def upsert_series_and_mapping(record: dict):
+    # relations로부터 동시 속한 시리즈 ID 집합
+    rel_ids = [edge["node"]["id"] for edge in record.get("relations", {}).get("edges", [])]
+    rel_ids.append(record["id"])
+    series_root = min(rel_ids)
 
+    # 타이틀 선택: native > romaji > english
+    titles = record.get("title", {})
+    series_title = titles.get("native") or titles.get("romaji") or titles.get("english") or f"Series {series_root}"
+    series_desc  = record.get("description") or ''
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Collect Series and related Works from AniList."
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # series 테이블 업서트
+    cursor.execute(
+        """
+        INSERT INTO series (id, title, description)
+        VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                                 title = VALUES(title),
+                                 description = VALUES(description)
+        """, (series_root, series_title, series_desc)
     )
-    parser.add_argument(
-        "--pages", type=int, default=3,
-        help="Number of AniList pages to fetch"
+    # series_work 매핑
+    cursor.execute(
+        """
+        INSERT IGNORE INTO series_work (series_id, work_id)
+        VALUES (%s, %s)
+        """, (series_root, record["id"])
     )
-    parser.add_argument(
-        "--per-page", type=int, default=50,
-        help="Items per page"
-    )
-    args = parser.parse_args()
+    conn.commit()
+    cursor.close()
+    conn.close()
 
-    for p in range(1, args.pages + 1):
-        upsert_series_and_works(p, args.per_page)
+# ──────────────────────────────────────────────────────────────────────────────
+# 메인 로직: 전체 페이지 순차 처리
 
-    print("Series and Works collection completed.")
+def main(delay: float = 0.5):
+    page = 1
+    while True:
+        try:
+            data = fetch_anilist_series(page)
+        except Exception as e:
+            print(f"[SeriesCollector] 페이지 {page} 조회 실패: {e}")
+            break
 
+        records = data.get("media", [])
+        if not records:
+            print("[SeriesCollector] 처리할 레코드 없음")
+            break
+
+        for rec in records:
+            try:
+                upsert_series_and_mapping(rec)
+                print(f"[SeriesCollector] upsert 완료: work_id={rec['id']} -> series_id={min([e['node']['id'] for e in rec.get('relations', {}).get('edges', [])] + [rec['id']])}")
+            except Exception as e:
+                print(f"[SeriesCollector] 매핑 실패: work_id={rec['id']}, error={e}")
+            time.sleep(delay)
+
+        if not data.get("pageInfo", {}).get("hasNextPage"):
+            print("[SeriesCollector] 모든 페이지 처리 완료.")
+            break
+        page += 1
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description="AniList 작품 시리즈 업서트 스크립트")
+    parser.add_argument("--delay", type=float, default=0.5, help="각 요청 사이 대기 시간(초)")
+    args = parser.parse_args()
+    main(delay=args.delay)
