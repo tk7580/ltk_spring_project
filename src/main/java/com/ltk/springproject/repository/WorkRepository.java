@@ -35,4 +35,6 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
     // 평점순으로 상위 N개 작품 조회 (기존과 유사)
     @Query("SELECT w FROM Work w ORDER BY w.averageRating DESC, w.ratingCount DESC")
     List<Work> findTopWorksByRating(Pageable pageable);
+
+
 }
