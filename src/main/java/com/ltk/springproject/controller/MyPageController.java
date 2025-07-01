@@ -1,10 +1,11 @@
-package com.example.ltkspring.controller;
+// src/main/java/com/ltk/springproject/controller/MyPageController.java
+package com.ltk.springproject.controller;
 
-import com.example.ltkspring.dto.MyPageDto;
-import com.example.ltkspring.dto.WorkDto;
-import com.example.ltkspring.model.User;
-import com.example.ltkspring.service.RecommendationService;
-import com.example.ltkspring.service.UserService;
+import com.ltk.springproject.dto.MyPageDto;
+import com.ltk.springproject.dto.WorkDto;
+import com.ltk.springproject.domain.Member;
+import com.ltk.springproject.service.UserService;
+import com.ltk.springproject.service.RecommendationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,21 +25,15 @@ public class MyPageController {
         this.recommendationService = recommendationService;
     }
 
-    /**
-     * 로그인된 사용자의 마이페이지 정보(즐겨찾기, 시청 기록 등)를 반환합니다.
-     */
     @GetMapping("/mypage")
-    public ResponseEntity<MyPageDto> getMyPage(@AuthenticationPrincipal User user) {
-        MyPageDto dto = userService.buildMyPage(user.getId());
+    public ResponseEntity<MyPageDto> getMyPage(@AuthenticationPrincipal Member member) {
+        MyPageDto dto = userService.buildMyPage(member.getId());
         return ResponseEntity.ok(dto);
     }
 
-    /**
-     * 로그인된 사용자를 위한 추천 작품 목록을 반환합니다.
-     */
     @GetMapping("/recommendations")
-    public ResponseEntity<List<WorkDto>> getRecommendations(@AuthenticationPrincipal User user) {
-        List<WorkDto> list = recommendationService.recommendFor(user.getId());
-        return ResponseEntity.ok(list);
+    public ResponseEntity<List<WorkDto>> getRecommendations(@AuthenticationPrincipal Member member) {
+        List<WorkDto> recommendations = recommendationService.recommendFor(member.getId());
+        return ResponseEntity.ok(recommendations);
     }
 }

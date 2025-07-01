@@ -1,0 +1,45 @@
+<!-- src/main/resources/static/recommendations.html -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>추천 작품</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <style>
+        body { font-family: sans-serif; padding: 2rem; }
+        .recommendation { margin-bottom: 1.5rem; }
+        .recommendation h3 { margin: 0 0 0.5rem; }
+    </style>
+</head>
+<body>
+<h1>당신을 위한 추천 작품</h1>
+<div id="recList"></div>
+
+<script>
+    // recommendations.json 파일을 프로젝트 static 디렉터리에 저장했다고 가정
+    fetch('/recommendations.json')
+        .then(res => res.json())
+        .then(data => {
+            const container = document.getElementById('recList');
+            if (!Array.isArray(data)) {
+                container.textContent = '추천 데이터를 불러오지 못했습니다.';
+                return;
+            }
+            data.forEach(rec => {
+                const div = document.createElement('div');
+                div.className = 'recommendation';
+                div.innerHTML = `
+            <h3>${rec.koreanTitle} (${rec.englishTitle})</h3>
+            <p>${rec.synopsis}</p>
+          `;
+                container.appendChild(div);
+            });
+        })
+        .catch(err => {
+            document.getElementById('recList').textContent = '로딩 중 오류 발생';
+            console.error(err);
+        });
+</script>
+</body>
+</html>

@@ -36,5 +36,13 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
     @Query("SELECT w FROM Work w ORDER BY w.averageRating DESC, w.ratingCount DESC")
     List<Work> findTopWorksByRating(Pageable pageable);
 
-
+    // src/main/java/com/ltk/springproject/repository/WorkRepository.java
+    @Query("SELECT DISTINCT w FROM Work w JOIN w.workGenres wg JOIN wg.genre g " +
+            "WHERE g.name IN :genres AND w.id NOT IN :excludedIds " +
+            "ORDER BY w.averageRating DESC")
+    List<Work> recommendWorksByGenres(
+            @Param("genres") List<String> genres,
+            @Param("excludedIds") List<Long> excludedIds,
+            Pageable pageable
+    );
 }

@@ -3,14 +3,14 @@
 
 import os
 import time
-import json
 import requests
 from dotenv import load_dotenv
 from db_utils import get_db_connection
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 환경변수 로드 & 검증
-load_dotenv()
+dotenv_path = os.getenv('ENV_PATH', '.env')
+load_dotenv(dotenv_path)
 ANILIST_API_URL   = "https://graphql.anilist.co"
 ANILIST_PAGE_SIZE = int(os.getenv("ANILIST_PAGE_SIZE", 50))
 
@@ -30,18 +30,9 @@ def fetch_anilist_media(page: int, per_page: int) -> dict:
           id
           title { romaji native english }
           description(asHtml: false)
-          status
           episodes
-          genres
           averageScore
           startDate { year month day }
-          endDate   { year month day }
-          relations {
-            edges {
-              relationType
-              node { id }
-            }
-          }
         }
       }
     }
@@ -55,57 +46,82 @@ def fetch_anilist_media(page: int, per_page: int) -> dict:
     res.raise_for_status()
     return res.json()["data"]["Page"]
 
+
 def save_media_to_db(media_list: list):
     """
-    가져온 AniList 미디어 목록을 DB의 work 테이블에 insert 또는 update 합니다.
+    가져온 AniList 미디어 목록을 DB의 series 및 work 테이블에 insert 또는 update 합니다.
     """
+    # 날짜 포맷 YYYY-MM-DD 내부 함수
+    def fmt_date(d):
+        if d and d.get("year"):
+            return f"{d['year']}-{d['month']:02d}-{d['day']:02d}"
+        return None
+
     conn = get_db_connection()
     cursor = conn.cursor()
+
     for m in media_list:
         titles = m.get("title", {})
-        # 날짜 포맷 YYYY-MM-DD
-        def fmt_date(d):
-            if d and d.get("year"):
-                return f"{d['year']}-{d['month']:02d}-{d['day']:02d}"
-            return None
+        # English 제목 우선, 없으면 Romaji, 없으면 Native
+        original_title = (
+                titles.get("english")
+                or titles.get("romaji")
+                or titles.get("native")
+                or f"AniList-{m['id']}"
+        )
 
-        cursor.execute("""
-                       INSERT INTO work
-                       (id,
-                        title_romaji, title_native, title_english,
-                        description, status, episodes, average_score,
-                        start_date, end_date)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                           ON DUPLICATE KEY UPDATE
-                                                title_romaji   = VALUES(title_romaji),
-                                                title_native   = VALUES(title_native),
-                                                title_english  = VALUES(title_english),
-                                                description    = VALUES(description),
-                                                status         = VALUES(status),
-                                                episodes       = VALUES(episodes),
-                                                average_score  = VALUES(average_score),
-                                                start_date     = VALUES(start_date),
-                                                end_date       = VALUES(end_date)
-                       """, (
-                           m["id"],
-                           titles.get("romaji"),
-                           titles.get("native"),
-                           titles.get("english"),
-                           m.get("description"),
-                           m.get("status"),
-                           m.get("episodes"),
-                           m.get("averageScore"),
-                           fmt_date(m.get("startDate")),
-                           fmt_date(m.get("endDate"))
-                       ))
+        # 1) series 테이블 보장
+        cursor.execute(
+            """
+            INSERT IGNORE INTO series
+              (id, titleOriginal, description, regDate, updateDate)
+            VALUES (%s, %s, %s, NOW(), NOW())
+            """, (
+                m['id'],
+                original_title,
+                m.get('description')
+            )
+        )
+
+        # 2) work 테이블에 삽입/갱신
+        cursor.execute(
+            """
+            INSERT INTO work
+              (id,
+               seriesId,
+               titleOriginal,
+               description,
+               episodes,
+               averageRating,
+               releaseDate)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+              seriesId        = VALUES(seriesId),
+              titleOriginal   = VALUES(titleOriginal),
+              description     = VALUES(description),
+              episodes        = VALUES(episodes),
+              averageRating   = VALUES(averageRating),
+              releaseDate     = VALUES(releaseDate)
+            """, (
+                m['id'],
+                m['id'],
+                original_title,
+                m.get('description'),
+                m.get('episodes'),
+                m.get('averageScore'),
+                fmt_date(m.get('startDate'))
+            )
+        )
+
     conn.commit()
     cursor.close()
     conn.close()
 
+
 def main(limit: int = None, delay: float = 1.0):
-    page    = 1
-    per_page= ANILIST_PAGE_SIZE
-    fetched = 0
+    page     = 1
+    per_page = ANILIST_PAGE_SIZE
+    fetched  = 0
 
     while True:
         try:
@@ -137,6 +153,6 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="AniList 애니메이션 정보 수집기")
     parser.add_argument("--limit", type=int,   default=None, help="최대 수집 작품 수")
-    parser.add_argument("--delay", type=float, default=1.0, help="페이지 조회 간 딜레이(초)")
+    parser.add_argument("--delay", type=float, default=1.0,  help="페이지 조회 간 딜레이(초)")
     args = parser.parse_args()
     main(limit=args.limit, delay=args.delay)

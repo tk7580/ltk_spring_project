@@ -1,41 +1,56 @@
-package com.example.ltkspring.service;
+// src/main/java/com/ltk/springproject/service/RecommendationService.java
+package com.ltk.springproject.service;
 
-import com.example.ltkspring.dto.WorkDto;
-import com.example.ltkspring.model.User;
-import com.example.ltkspring.repository.WorkRepository;
-import com.example.ltkspring.repository.UserRepository;
+import com.ltk.springproject.dto.WorkDto;
+import com.ltk.springproject.domain.Work;
+import com.ltk.springproject.domain.MemberWishlistWork;
+import com.ltk.springproject.domain.MemberWatchedWork;
+import com.ltk.springproject.repository.MemberWishlistWorkRepository;
+import com.ltk.springproject.repository.MemberWatchedWorkRepository;
+import com.ltk.springproject.repository.WorkRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class RecommendationService {
-    private final UserRepository userRepository;
+    private final MemberWishlistWorkRepository wishlistRepo;
+    private final MemberWatchedWorkRepository watchedRepo;
     private final WorkRepository workRepository;
 
-    public RecommendationService(UserRepository userRepository, WorkRepository workRepository) {
-        this.userRepository = userRepository;
+    public RecommendationService(MemberWishlistWorkRepository wishlistRepo,
+                                 MemberWatchedWorkRepository watchedRepo,
+                                 WorkRepository workRepository) {
+        this.wishlistRepo = wishlistRepo;
+        this.watchedRepo = watchedRepo;
         this.workRepository = workRepository;
     }
 
-    /**
-     * 사용자 시청/즐겨찾기 기반으로 추천 목록 생성
-     */
-    @Transactional(readOnly = true)
-    public List<WorkDto> recommendFor(Long userId) {
-        User user = userRepository.findById(userId).orElseThrow();
-        // 사용자가 좋아한 장르 수집
-        List<String> favGenres = user.getFavorites().stream()
-                .flatMap(w -> w.getGenres().stream())
-                .distinct()
-                .collect(Collectors.toList());
-        // 유사 장르 작품 상위 10개 조회 (평점·최신순)
-        return workRepository.findTop10ByGenresInAndIdNotInOrderByAverageScoreDesc(favGenres,
-                        user.getWatchedIds())
-                .stream()
-                .map(WorkDto::fromEntity)
-                .collect(Collectors.toList());
+    public List<WorkDto> recommendFor(Long memberId) {
+        List<Work> favoriteWorks = wishlistRepo.findByMemberId(memberId)
+                .stream().map(MemberWishlistWork::getWork).collect(Collectors.toList());
+        List<Work> watchedWorks = watchedRepo.findByMemberId(memberId)
+                .stream().map(MemberWatchedWork::getWork).collect(Collectors.toList());
+
+        Set<String> favGenres = favoriteWorks.stream()
+                .flatMap(w -> w.getWorkGenres().stream()
+                        .map(wg -> wg.getGenre().getName()))
+                .collect(Collectors.toSet());
+
+        Set<Long> excludedIds = new HashSet<>();
+        favoriteWorks.forEach(w -> excludedIds.add(w.getId()));
+        watchedWorks.forEach(w -> excludedIds.add(w.getId()));
+
+        List<Work> works = workRepository.recommendWorksByGenres(
+                new ArrayList<>(favGenres),
+                new ArrayList<>(excludedIds),
+                PageRequest.of(0, 10)
+        );
+
+        return works.stream().map(WorkDto::fromEntity).collect(Collectors.toList());
     }
 }

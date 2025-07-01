@@ -1,5 +1,8 @@
 package com.ltk.springproject.controller;
 
+import com.ltk.springproject.dto.MyPageDto;
+import com.ltk.springproject.service.UserService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.ltk.springproject.domain.Member;
 import com.ltk.springproject.domain.Work;
 import com.ltk.springproject.dto.WatchedWorkDto;
@@ -31,6 +34,7 @@ public class MemberController {
     private final AuthenticationManager authenticationManager;
     private final UserActivityService userActivityService;
     private final MemberRepository memberRepository;
+    private final UserService userService;
 
     @GetMapping("/login")
     public String showLoginForm(Principal principal) {
@@ -101,5 +105,16 @@ public class MemberController {
         model.addAttribute("watchedWorks", watchedWorks);
 
         return "member/watched";
+    }
+
+    @GetMapping("/mypage")
+    public String myPage(@AuthenticationPrincipal Member member, Model model) {
+        // 로그인 체크
+        if (member == null) {
+            return "redirect:/member/login";
+        }
+        MyPageDto dto = userService.buildMyPage(member.getId());
+        model.addAttribute("mypage", dto);
+        return "member/mypage";   // 소문자 member 디렉토리 기준
     }
 }
