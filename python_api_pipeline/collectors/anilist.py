@@ -1,13 +1,9 @@
-"""Simple AniList GraphQL collector – camelCase DB 컬럼용."""
-from __future__ import annotations
-
-import requests, time
-from datetime import datetime, date
+"""AniList GraphQL collector (simplified)."""
+import requests, time, datetime
 from typing import Iterable
 
 from ..db import SessionLocal
-from ..models import Work
-from sqlalchemy.exc import IntegrityError
+from ..models import Work, WorkIdentifier
 
 QUERY = """
 query ($page:Int!, $perPage:Int!) {
@@ -24,12 +20,13 @@ query ($page:Int!, $perPage:Int!) {
 }
 """
 
-def _safe_date(yr: int | None, mo: int | None, dy: int | None) -> date | None:
-    if not yr:
-        return None
-    return date(yr, mo or 1, dy or 1)
+def fetch_page(page:int, per_page:int=50) -> list[dict]:
+    r = requests.post("https://graphql.anilist.co",
+        json={"query": QUERY, "variables": {"page": page, "perPage": per_page}})
+    r.raise_for_status()
+    return r.json()["data"]["Page"]["media"]
 
-def _save_media(items: Iterable[dict]) -> tuple[int,int]:
+def _save_media(items:Iterable[dict]):
     sess = SessionLocal()
     inserted = skipped = 0
     for m in items:
@@ -39,43 +36,34 @@ def _save_media(items: Iterable[dict]) -> tuple[int,int]:
             continue
 
         title = m["title"]["romaji"] or m["title"]["english"] or m["title"]["native"]
+        year = m["startDate"].get("year") or 2000
+        month = m["startDate"].get("month") or 1
+        day = m["startDate"].get("day") or 1
+
         work = Work(
-            seriesId     = None,                     # 아직 시리즈 미정
-            anilistId    = aid,
-            titleOriginal= title,
-            titleKr      = None,
-            description  = m["description"],
-            thumbnailUrl = m["coverImage"]["large"],
-            releaseDate  = _safe_date(
-                m["startDate"]["year"],
-                m["startDate"]["month"],
-                m["startDate"]["day"]),
-            episodes     = m["episodes"],
-            isOriginal   = False,
-            regDate      = datetime.utcnow(),
-            updateDate   = datetime.utcnow()
+            anilistId=aid,
+            titleOriginal=title,
+            releaseDate=datetime.date(year, month, day),
+            description=m.get("description"),
+            thumbnailUrl=m["coverImage"].get("large"),
+            isOriginal=False,
         )
         sess.add(work)
+        sess.flush()
+
+        sess.add(WorkIdentifier(workId=work.id, sourceName="anilist", sourceId=str(aid)))
         inserted += 1
 
-    try:
-        sess.commit()
-    except IntegrityError:
-        sess.rollback()
-    finally:
-        sess.close()
-
+    sess.commit()
+    sess.close()
     return inserted, skipped
 
 def main(args):
     pages = args.pages or 1
     delay = args.delay or 0.0
-    for p in range(1, pages + 1):
-        media = requests.post(
-            "https://graphql.anilist.co",
-            json={"query": QUERY, "variables": {"page": p, "perPage": 50}}
-        ).json()["data"]["Page"]["media"]
-
-        ins, skp = _save_media(media)
-        print(f"[AniList] page {p} → inserted {ins} | skipped {skp}")
+    per_page = 50
+    for p in range(1, pages+1):
+        items = fetch_page(p, per_page)
+        ins, skp = _save_media(items)
+        print(f"[AniList] page {p} \u2192 inserted {ins} | skipped {skp}")
         time.sleep(delay)

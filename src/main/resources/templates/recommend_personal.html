@@ -1,0 +1,20 @@
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>맞춤 추천</title>
+    <link rel="stylesheet" th:href="@{/static/css/app.css}"/>
+</head>
+<body class="bg-neutral-50 text-gray-900">
+<div class="container mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-4">회원 맞춤 추천</h1>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div th:each="w:${recs}" class="border rounded-xl shadow p-2">
+            <img th:src="${w.thumbnailUrl}" class="rounded-md w-full aspect-[2/3] object-cover"/>
+            <h3 class="mt-2 font-medium" th:text="${w.titleKr?:w.titleOriginal}"></h3>
+            <p class="text-sm text-gray-600" th:text="${#numbers.formatDecimal(w.averageRating,1,1)}"></p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

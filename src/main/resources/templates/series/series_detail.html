@@ -1,0 +1,27 @@
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${series.titleKr?:series.titleOriginal}">Series</title>
+    <link rel="stylesheet" th:href="@{/static/css/app.css}" />
+</head>
+<body class="bg-neutral-50 text-gray-900">
+<div class="container mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-4" th:text="${series.titleKr?:series.titleOriginal}"></h1>
+    <p th:text="${series.description}"></p>
+
+    <!-- Viewing Guide -->
+    <div class="mt-10">
+        <h2 class="text-2xl font-semibold mb-2 border-b pb-1 border-gray-300">시청 가이드</h2>
+        <div th:if="${guide!=null}">
+            <h3 class="text-xl font-medium" th:text="${guide.guideName}"></h3>
+            <p class="mb-4" th:text="${guide.guideDescription}"></p>
+            <ol class="list-decimal pl-6 space-y-1">
+                <li th:each="item:${guide.items}" th:text="${item.stepNumber} + '. ' + (item.work.titleKr?:item.work.titleOriginal)"></li>
+            </ol>
+        </div>
+        <div th:if="${guide==null}" class="text-gray-500">아직 가이드가 없습니다.</div>
+    </div>
+</div>
+</body>
+</html>

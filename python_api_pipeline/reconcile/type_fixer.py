@@ -1,54 +1,38 @@
-"""
-Live-Action 타입만 달린 작품에 Drama 타입을 붙여주는 스크립트
-$ python -m python_api_pipeline.run fix-types --limit 300
-"""
-from argparse import Namespace
-from datetime import datetime
+"""Ensure every Work has at least Animation OR Drama type."""
+from sqlalchemy import select
+from ..db import SessionLocal
+from ..models import Work, WorkType, WorkTypeMapping
 
-from sqlalchemy import select, exists, and_, not_
-from ..db      import SessionLocal
-from ..models  import Work, WorkType, WorkTypeMapping
+def main(args):
+    limit = args.limit or 300
+    sess = SessionLocal()
 
-def main(args: Namespace) -> None:
-    sess  = SessionLocal()
-    limit = args.limit or 5000
+    animation = sess.scalar(select(WorkType).where(WorkType.name=="Animation"))
+    drama = sess.scalar(select(WorkType).where(WorkType.name=="Drama"))
 
-    dramaId = sess.query(WorkType.id).filter_by(name="Drama").scalar()
-    liveId  = sess.query(WorkType.id).filter_by(name="Live-Action").scalar()
-    if not (dramaId and liveId):
-        raise RuntimeError("WorkType 'Drama' 또는 'Live-Action' 이 없습니다.")
+    if not (animation and drama):
+        print("[type-fixer] required WorkType rows missing.")
+        return
 
-    # Live-Action 은 있지만 Drama 는 없는 작품
-    subq = (
-        select(1)
-        .select_from(WorkTypeMapping)
-        .where(
-            and_(
-                WorkTypeMapping.workId == Work.id,
-                WorkTypeMapping.typeId == dramaId
+    q = (
+        select(Work.id)
+        .join(WorkTypeMapping, Work.id==WorkTypeMapping.workId)
+        .where(WorkTypeMapping.typeId==animation.id)
+        .limit(limit)
+    )
+    candidate_ids = [row[0] for row in sess.execute(q)]
+    fixed = 0
+    for wid in candidate_ids:
+        exists = sess.scalar(
+            select(WorkTypeMapping).where(
+                WorkTypeMapping.workId==wid,
+                WorkTypeMapping.typeId==drama.id
             )
         )
-    )
-
-    workIds = (
-        sess.query(Work.id)
-        .join(WorkTypeMapping, Work.id == WorkTypeMapping.workId)
-        .filter(WorkTypeMapping.typeId == liveId)
-        .filter(not_(exists(subq)))
-        .limit(limit)
-        .all()
-    )
-
-    toInsert = [
-        WorkTypeMapping(
-            workId     = w_id,
-            typeId     = dramaId,
-            regDate    = datetime.utcnow()
-        )
-        for (w_id,) in workIds
-    ]
-    if toInsert:
-        sess.bulk_save_objects(toInsert)
-        sess.commit()
+        if exists:
+            continue
+        sess.add(WorkTypeMapping(workId=wid, typeId=drama.id))
+        fixed += 1
+    sess.commit()
     sess.close()
-    print(f"[fix-types] Drama 매핑 추가 {len(toInsert)}건 완료")
+    print(f"[fix-types] Drama 매핑 추가 {fixed}건 완료")
